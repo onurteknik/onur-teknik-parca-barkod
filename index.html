@@ -105,7 +105,7 @@ textarea{min-height:80px;resize:vertical}.row{display:grid;grid-template-columns
 <h2>Barkoddan Hızlı Bul</h2>
 <button class="btn orange" onclick="startLookupScanner()">BARKODU KAMERADAN OKUT</button>
 <div id="lookupVideoWrap" style="display:none;margin-top:9px;position:relative"><video id="lookupVideo" class="video" playsinline muted></video><div class="scanline"></div></div>
-<div id="lookupScanMsg" class="msg">Barkod okununca kısa “dip” sesi + hafif titreşim gelir. Sonuç hemen yukarıdaki kartta görünür.</div>
+<div id="lookupScanMsg" class="msg">Barkod okununca market tipi kısa “diit” barkod sesi + hafif titreşim gelir. Sonuç hemen yukarıdaki kartta görünür.</div>
 <button class="btn dark" onclick="stopLookupScanner()">KAMERAYI KAPAT</button>
 <label>Barkod fotoğrafı / ekran görüntüsü</label>
 <input id="barcodePhoto" type="file" accept="image/*" capture="environment">
@@ -188,7 +188,7 @@ textarea{min-height:80px;resize:vertical}.row{display:grid;grid-template-columns
 </div>
 </div>
 </main>
-<footer>TEST 5.1 • Kamera üstte • Kısa dip sesi • Yönetim altta • Servis fiyatı • Araç/Depo stok • Fiyat sepeti</footer>
+<footer>TEST 5.2 • Kamera üstte • Market tipi “diit” barkod sesi • Yönetim altta • Servis fiyatı • Araç/Depo stok • Fiyat sepeti</footer>
 
 <script src="https://cdn.jsdelivr.net/npm/@ericblade/quagga2@1.8.4/dist/quagga.min.js"></script>
 <script>
@@ -282,8 +282,47 @@ function smartText(v){
 function moneyTR(v){let n=Number(v||0);return n>0?n.toLocaleString('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:2})+' TL':'Tanımlı değil'}
 function servicePriceOf(x){return Number(x&&x.servicePrice||0)}
 function scanBeep(kind='scan'){
- try{let AC=window.AudioContext||window.webkitAudioContext;if(AC){let c=new AC(),o=c.createOscillator(),g=c.createGain(),t=c.currentTime;o.connect(g);g.connect(c.destination);o.type='sine';if(kind==='miss'){o.frequency.setValueAtTime(390,t);g.gain.setValueAtTime(.032,t);g.gain.exponentialRampToValueAtTime(.001,t+.10);o.start(t);o.stop(t+.105)}else{o.frequency.setValueAtTime(980,t);o.frequency.exponentialRampToValueAtTime(720,t+.065);g.gain.setValueAtTime(.035,t);g.gain.exponentialRampToValueAtTime(.001,t+.07);o.start(t);o.stop(t+.075)}setTimeout(()=>c.close&&c.close(),220)}}catch(e){}
- try{if(navigator.vibrate)navigator.vibrate(kind==='miss'?[55,45,55]:30)}catch(e){}
+ try{
+  let AC=window.AudioContext||window.webkitAudioContext;
+  if(AC){
+   let c=new AC(),t=c.currentTime;
+   if(kind==='miss'){
+    let o=c.createOscillator(),g=c.createGain();
+    o.connect(g);g.connect(c.destination);
+    o.type='sine';o.frequency.setValueAtTime(390,t);
+    g.gain.setValueAtTime(.032,t);g.gain.exponentialRampToValueAtTime(.001,t+.10);
+    o.start(t);o.stop(t+.105);
+   }else{
+    // TEST 5.2: Market / el terminali tipi net "diit" barkod sesi.
+    // İki kısa yüksek frekans katmanı, yaklaşık 0.12 sn.
+    let master=c.createGain();
+    master.connect(c.destination);
+    master.gain.setValueAtTime(.0001,t);
+    master.gain.exponentialRampToValueAtTime(.060,t+.006);
+    master.gain.setValueAtTime(.060,t+.085);
+    master.gain.exponentialRampToValueAtTime(.0001,t+.125);
+
+    let o1=c.createOscillator(),g1=c.createGain();
+    o1.type='square';
+    o1.frequency.setValueAtTime(2350,t);
+    o1.frequency.exponentialRampToValueAtTime(2150,t+.11);
+    g1.gain.setValueAtTime(.72,t);
+    o1.connect(g1);g1.connect(master);
+
+    let o2=c.createOscillator(),g2=c.createGain();
+    o2.type='sine';
+    o2.frequency.setValueAtTime(3150,t);
+    o2.frequency.exponentialRampToValueAtTime(2850,t+.11);
+    g2.gain.setValueAtTime(.28,t);
+    o2.connect(g2);g2.connect(master);
+
+    o1.start(t);o2.start(t);
+    o1.stop(t+.13);o2.stop(t+.13);
+   }
+   setTimeout(()=>c.close&&c.close(),260);
+  }
+ }catch(e){}
+ try{if(navigator.vibrate)navigator.vibrate(kind==='miss'?[55,45,55]:22)}catch(e){}
 }
 function missingFeedback(){scanBeep('miss');setTimeout(()=>scanBeep('miss'),170)}
 function queueLookup(){clearTimeout(lookupTypingTimer);lookupTypingTimer=setTimeout(()=>{let q=($('lookupQuery').value||'').trim();if(q.length>=2)lookupText('typing');else if(!q)renderLookup([])},220)}
