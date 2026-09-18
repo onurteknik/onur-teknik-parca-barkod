@@ -155,14 +155,20 @@ Bu ürüne üç fiyatı da aynı anda yazın. Personel fiyat ararken yalnız <b>
 <section id="liste" class="hidden">
 <button class="btn orange backPrice" onclick="showTab('fiyat')">← FİYAT / PARÇA BUL'A DÖN</button>
 <div class="card">
-<h2>Parça Kayıtları</h2>
-<input id="search" class="search" placeholder="Parça adı, barkod, marka veya müşteri ara" oninput="render()">
+<h2>Ortak Parça Kataloğu</h2>
+<div class="msg">PC'de ve telefonda kayıtlı ortak ürünler burada birlikte görünür. Silme yetkisi PC yöneticisindedir.</div>
+<input id="search" class="search" placeholder="Parça adı, barkod veya marka ara" oninput="render()">
 <div class="stats">
-<div class="stat"><b id="sCount">0</b><small>Kayıt</small></div>
-<div class="stat"><b id="sEmanet">0</b><small>Emanet</small></div>
-<div class="stat"><b id="sUsed">0</b><small>Kullanıldı</small></div>
+<div class="stat"><b id="sCount">0</b><small>Toplam Parça</small></div>
+<div class="stat"><b id="sEmanet">0</b><small>Araçta Adet</small></div>
+<div class="stat"><b id="sUsed">0</b><small>Depoda Adet</small></div>
 </div>
 <div id="list"></div>
+</div>
+<div class="card">
+<h2>Telefon İşlem Geçmişi</h2>
+<div class="msg">Telefondan yapılan stok, emanet ve kullanım işlemleri burada geçmiş olarak tutulur.</div>
+<div id="localHistoryList"></div>
 </div>
 </section>
 
@@ -196,7 +202,7 @@ Bu ürüne üç fiyatı da aynı anda yazın. Personel fiyat ararken yalnız <b>
 </div>
 </div>
 </main>
-<footer>TEST 5.5 • Yönetim Parça Ekleme • Firma + Perakende + Servis fiyatı aynı anda • PC fiyat otoritesi • Fiyat sepeti</footer>
+<footer>TEST 5.6 • Ortak Parça Kataloğu • PC+Telefon aynı liste • Kalıcı silme filtresi • Üç fiyat • Fiyat sepeti</footer>
 
 <script src="https://cdn.jsdelivr.net/npm/@ericblade/quagga2@1.8.4/dist/quagga.min.js"></script>
 <script>
@@ -221,7 +227,7 @@ function showTab(id,el){
  $(id).classList.remove('hidden');
  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
  let targetEl=el||document.querySelector('.tab[data-target="'+id+'"]'); if(targetEl)targetEl.classList.add('active');
- if(id==='liste') render();
+ if(id==='liste'){ if(cloudReady) pullCloudCatalog(true).then(()=>render()); else render(); }
  if(id==='fiyat'){ if(cloudReady) pullCloudCatalog(true).then(()=>renderLookup([])); else renderLookup([]); window.scrollTo({top:0,behavior:'smooth'}); }
  else window.scrollTo({top:0,behavior:'smooth'});
 }
@@ -259,6 +265,10 @@ function stopScanner(){
 }
 function getAll(){try{let a=JSON.parse(localStorage.getItem('ot_parca_barkod_v3')||localStorage.getItem('ot_parca_barkod_v2')||'[]');if(!Array.isArray(a))return[];let seen=new Set(),out=[];for(const x of a){let k=String(x&&x.barcode||'').trim();if(k){if(seen.has(k))continue;seen.add(k)}out.push(x)}return out}catch(e){return[]}}
 function setAll(a){localStorage.setItem('ot_parca_barkod_v3',JSON.stringify(a))}
+let deletedCatalog={};
+function getDeletedCache(){try{return JSON.parse(localStorage.getItem('ot_pb_deleted_cache_v1')||'{}')}catch(e){return{}}}
+function setDeletedCache(v){deletedCatalog=v||{};localStorage.setItem('ot_pb_deleted_cache_v1',JSON.stringify(deletedCatalog))}
+function isDeletedBarcode(b){return !!(deletedCatalog&&deletedCatalog[String(b||'')])}
 function getCatalogCache(){try{return JSON.parse(localStorage.getItem('ot_pb_catalog_cache_v3')||'{}')}catch(e){return{}}}
 function setCatalogCache(v){cloudCatalog=v||{};localStorage.setItem('ot_pb_catalog_cache_v3',JSON.stringify(cloudCatalog))}
 function eanCheck(base){let s=0;for(let i=0;i<base.length;i++)s+=Number(base[i])*(i%2===0?1:3);return String((10-(s%10))%10)}
@@ -294,18 +304,24 @@ async function pullCloudCatalog(silent){
  if(!cloudReady)return false;
  try{
   let cat=await cloudFetch(cloudDbUrl('catalogV1/items'))||{},
-      stock=await cloudFetch(cloudDbUrl('stock'))||{},cache={};
-  // Önce mobil katalog: fotoğraf/isim gibi yardımcı bilgiler.
+      stock=await cloudFetch(cloudDbUrl('stock'))||{},
+      tombRows=await cloudFetch(cloudDbUrl('catalogDeleted'))||{},
+      cache={},deleted={};
+
+  Object.values(tombRows||{}).forEach(x=>{
+    if(x&&x.deleted&&x.barcode)deleted[String(x.barcode)]=x;
+  });
+  setDeletedCache(deleted);
+
   for(const x of Object.values(cat)){
-   if(!x||!x.barcode)continue;
+   if(!x||!x.barcode||deleted[String(x.barcode)])continue;
    let b=String(x.barcode);
    cache[b]={barcode:b,name:x.name||'',model:x.brand||x.model||'',photo:x.photo||'',
      firmPrice:Number(x.firmPrice||0),retailPrice:Number(x.retailPrice||0),
      servicePrice:Number(x.servicePrice||0),warehouse:Number(x.warehouse||0),vehicle:Number(x.vehicle||0)};
   }
-  // Sonra PC stock kaydı: FİYAT ve STOKTA PC kesin otorite.
   for(const x of Object.values(stock)){
-   if(!x||!x.barcode)continue;
+   if(!x||!x.barcode||deleted[String(x.barcode)])continue;
    let b=String(x.barcode),z=cache[b]||{barcode:b};
    cache[b]={...z,barcode:b,
      name:x.name||z.name||'',model:x.brand||z.model||'',photo:x.photo||z.photo||'',
@@ -315,7 +331,8 @@ async function pullCloudCatalog(silent){
      warehouse:Number(x.warehouse??0),vehicle:Number(x.vehicle??0)};
   }
   setCatalogCache(cache);
-  if(!silent)cloudMsg('● PC fiyat/stok otoritesiyle '+Object.keys(cache).length+' parça alındı.','cloudOk');
+  if(!silent)cloudMsg('● Ortak katalog: '+Object.keys(cache).length+' parça · silinenler filtrelendi.','cloudOk');
+  render();
   return true
  }catch(e){
   if(!silent)cloudMsg('Parçalar alınamadı: '+String(e.message||e),'cloudBad');
@@ -389,12 +406,13 @@ function missingFeedback(){scanBeep('miss');setTimeout(()=>scanBeep('miss'),170)
 function queueLookup(){clearTimeout(lookupTypingTimer);lookupTypingTimer=setTimeout(()=>{let q=($('lookupQuery').value||'').trim();if(q.length>=2)lookupText('typing');else if(!q)renderLookup([])},220)}
 function allLookupItems(){
  let map=new Map(),cache=cloudCatalog&&Object.keys(cloudCatalog).length?cloudCatalog:getCatalogCache();
- Object.values(cache||{}).forEach(x=>{if(x&&x.barcode)map.set(String(x.barcode),{...x,barcode:String(x.barcode)})});
+ if(!Object.keys(deletedCatalog||{}).length)deletedCatalog=getDeletedCache();
+ Object.values(cache||{}).forEach(x=>{if(x&&x.barcode&&!isDeletedBarcode(x.barcode))map.set(String(x.barcode),{...x,barcode:String(x.barcode)})});
  getAll().forEach(x=>{
   // Buluta daha önce başarıyla gitmiş eski telefon geçmişi katalog otoritesi değildir.
   // Yalnız çevrimdışıyken veya bekleyen yeni kayıtsa aramaya eklenir.
   if(cloudReady && !x.cloudPending)return;
-  let b=String(x.barcode||'');if(!b)return;
+  let b=String(x.barcode||'');if(!b||isDeletedBarcode(b))return;
   let z=map.get(b)||{barcode:b},pp=recordPrices(x);
   map.set(b,{...z,barcode:b,name:z.name||x.name||'',model:z.model||x.model||'',photo:z.photo||x.photo||'',
     firmPrice:Number(z.firmPrice||pp.firmPrice||0),retailPrice:Number(z.retailPrice||pp.retailPrice||0),
@@ -518,7 +536,7 @@ async function saveItem(){
   customer:$('customer').value.trim(),note:$('note').value.trim(),
   photo:photoData||(existing&&existing.photo)||'',
   date:new Date().toLocaleString('tr-TR'),updatedAt:new Date().toISOString(),
-  cloudPending:true,syncedAt:existing&&existing.syncedAt||''
+  cloudPending:true,reAddIntent:!!isDeletedBarcode(b),syncedAt:existing&&existing.syncedAt||''
  };
  if(existing)a=a.map(x=>String(x.barcode)===String(b)?rec:x);else a.unshift(rec);setAll(a);
  if(cloudReady){try{await pushCatalogItem(rec);rec.cloudPending=false;rec.syncedAt=new Date().toISOString();setAll(getAll().map(x=>String(x.barcode)===String(b)?rec:x));cloudMsg('● '+n+' PC ortak bulutuna gönderildi.','cloudOk')}catch(e){cloudMsg('Kayıt telefonda saklandı; buluta gönderilemedi: '+String(e.message||e),'cloudBad')}}
@@ -526,25 +544,65 @@ async function saveItem(){
 }
 async function syncLocalToCloud(silent){
  if(!cloudReady){if(!silent)cloudMsg('Önce buluta bağlanın.','cloudWarn');return false}
- let a=getAll(),ok=0,fail=0,skipped=0;
+ try{
+  let tombRows=await cloudFetch(cloudDbUrl('catalogDeleted'))||{},d={};
+  Object.values(tombRows||{}).forEach(r=>{if(r&&r.deleted&&r.barcode)d[String(r.barcode)]=r});
+  setDeletedCache(d);
+ }catch(e){}
+ let a=getAll(),ok=0,fail=0,skipped=0,blocked=0;
  for(const x of a){
   if(!x.cloudPending){skipped++;continue}
-  try{await pushCatalogItem(x);x.cloudPending=false;x.syncedAt=new Date().toISOString();ok++}
-  catch(e){x.cloudPending=true;fail++}
+  if(isDeletedBarcode(x.barcode) && !x.reAddIntent){x.cloudPending=false;blocked++;continue}
+  try{
+    if(x.reAddIntent){
+      try{await cloudFetch(cloudDbUrl('catalogDeleted/'+safeKey(x.barcode)),{method:'DELETE'})}catch(e){}
+      delete deletedCatalog[String(x.barcode)];setDeletedCache(deletedCatalog);
+    }
+    await pushCatalogItem(x);x.cloudPending=false;x.reAddIntent=false;x.syncedAt=new Date().toISOString();ok++;
+  }catch(e){x.cloudPending=true;fail++}
  }
  setAll(a);render();
- if(!silent)cloudMsg('Senkron · '+ok+' yeni/bekleyen gönderildi'+(skipped?' · '+skipped+' eski kayıt yeniden gönderilmedi':'')+(fail?' · '+fail+' hata':''),fail?'cloudWarn':'cloudOk');
+ if(!silent)cloudMsg('Senkron · '+ok+' gönderildi'+(skipped?' · '+skipped+' eski kayıt atlandı':'')+(blocked?' · '+blocked+' kalıcı silinen geri gönderilmedi':'')+(fail?' · '+fail+' hata':''),fail?'cloudWarn':'cloudOk');
  return fail===0
 }
 function clearForm(){['barcode','name','model','firmPrice','retailPrice','servicePrice','customer','note'].forEach(x=>{if($(x))$(x).value=''});$('qty').value='1';$('photo').value='';photoData='';$('preview').src='';$('preview').style.display='none';stopScanner()}
 function delItem(id){if(confirm('Bu kayıt silinsin mi?')){setAll(getAll().filter(x=>x.id!==id));render()}}
 function render(){
- const all=getAll(), q=($('search')?.value||'').toLocaleLowerCase('tr-TR');
- const a=all.filter(x=>[x.name,x.barcode,x.model,x.customer,x.action].join(' ').toLocaleLowerCase('tr-TR').includes(q));
+ const q=($('search')?.value||'').toLocaleLowerCase('tr-TR');
+ const all=allLookupItems().filter(x=>!isDeletedBarcode(x.barcode));
+ const a=all.filter(x=>[x.name,x.barcode,x.model].join(' ').toLocaleLowerCase('tr-TR').includes(q));
+
  $('sCount').textContent=all.length;
- $('sEmanet').textContent=all.filter(x=>x.action==='Emanet verildi').length;
- $('sUsed').textContent=all.filter(x=>x.action==='Müşteride kullanıldı').length;
- $('list').innerHTML=a.length?a.map(x=>`<div class="item">${x.photo?`<img src="${x.photo}" onclick="window.open(this.src,'_blank')">`:''}<b>${esc(x.name||'İsimsiz parça')}</b><small>${esc(x.barcode||'Barkod yok')} • ${esc(x.model||'Model yok')}</small><br><span class="badge">${esc(x.action)}</span><span class="badge">Adet: ${esc(x.qty)}</span><span class="badge">Firma: ${moneyTR(recordPrices(x).firmPrice)}</span><span class="badge">Perakende: ${moneyTR(recordPrices(x).retailPrice)}</span><span class="badge">Servis: ${moneyTR(recordPrices(x).servicePrice)}</span><span class="badge ${x.cloudPending?'pendingBadge':'syncBadge'}">${x.cloudPending?'Bulut bekliyor':'Bulut ✓'}</span><div style="clear:both"></div><small>${esc(x.customer||'Müşteri/Firma yok')} • ${esc(x.date)}${x.note?' • '+esc(x.note):''}</small><button class="btn red" style="padding:8px;margin-top:8px" onclick="delItem(${x.id})">SİL</button></div>`).join(''):'<div class="msg">Kayıt bulunamadı.</div>';
+ $('sEmanet').textContent=all.reduce((s,x)=>s+Number(x.vehicle||0),0);
+ $('sUsed').textContent=all.reduce((s,x)=>s+Number(x.warehouse||0),0);
+
+ $('list').innerHTML=a.length?a.map(x=>`
+  <div class="item">
+   ${x.photo?`<img src="${x.photo}" onclick="window.open(this.src,'_blank')">`:''}
+   <b>${esc(x.name||'İsimsiz parça')}</b>
+   <small>${esc(x.barcode||'Barkod yok')} • ${esc(x.model||'Model yok')}</small><br>
+   <span class="badge">Araç: ${Number(x.vehicle||0)}</span>
+   <span class="badge">Depo: ${Number(x.warehouse||0)}</span>
+   <span class="badge">Firma: ${moneyTR(Number(x.firmPrice||0))}</span>
+   <span class="badge">Perakende: ${moneyTR(Number(x.retailPrice||0))}</span>
+   <span class="badge">Servis: ${moneyTR(Number(x.servicePrice||0))}</span>
+   <div style="clear:both"></div>
+   <small>Ortak katalog • Silme işlemi PC yönetiminden yapılır.</small>
+  </div>`).join(''):'<div class="msg">Ortak katalogda eşleşen parça bulunamadı.</div>';
+
+ const hist=getAll().slice().sort((x,y)=>Number(y.id||0)-Number(x.id||0));
+ let hh=$('localHistoryList');
+ if(hh)hh.innerHTML=hist.length?hist.map(x=>`
+  <div class="item">
+   ${x.photo?`<img src="${x.photo}" onclick="window.open(this.src,'_blank')">`:''}
+   <b>${esc(x.name||'İsimsiz parça')}</b>
+   <small>${esc(x.barcode||'Barkod yok')} • ${esc(x.model||'Model yok')}</small><br>
+   <span class="badge">${esc(x.action||'İşlem')}</span>
+   <span class="badge">Adet: ${esc(x.qty||'1')}</span>
+   <span class="badge ${x.cloudPending?'pendingBadge':'syncBadge'}">${x.cloudPending?'Bulut bekliyor':'Bulut ✓'}</span>
+   <div style="clear:both"></div>
+   <small>${esc(x.customer||'Müşteri/Firma yok')} • ${esc(x.date||'')}</small>
+  </div>`).join(''):'<div class="msg">Telefon işlem geçmişi boş.</div>';
 }
 function exportBackup(){
  const blob=new Blob([JSON.stringify({app:'Onur Teknik Parça Barkod',version:3,exported:new Date().toISOString(),items:getAll()},null,2)],{type:'application/json'});
