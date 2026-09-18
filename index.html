@@ -72,7 +72,7 @@ textarea{min-height:80px;resize:vertical}.row{display:grid;grid-template-columns
 </div>
 
 <div class="card">
-<h2>Parça Bilgisi</h2>
+<h2>Yönetim Parça Ekleme</h2>
 <label>Parça fotoğrafı</label>
 <input id="photo" type="file" accept="image/*" capture="environment">
 <img id="preview" class="preview" alt="Parça fotoğrafı">
@@ -80,9 +80,17 @@ textarea{min-height:80px;resize:vertical}.row{display:grid;grid-template-columns
 <div><label>Parça adı</label><input id="name" placeholder="Örn. Üç yollu vana motoru"></div>
 <div><label>Marka / model</label><input id="model" placeholder="Örn. Vaillant"></div>
 </div>
+<div class="msg" style="border:1px solid #f47b16">
+<b>Yönetim fiyatları</b><br>
+Bu ürüne üç fiyatı da aynı anda yazın. Personel fiyat ararken yalnız <b>Servis Fiyatı</b>nı görür.
+</div>
 <div class="row">
-<div><label>Fiyat türü</label><select id="priceType"><option>Firma</option><option>Perakende</option><option>Saha servis / Parça fiyatı</option></select></div>
-<div><label>Fiyat (TL)</label><input id="price" inputmode="decimal" placeholder="0,00"></div>
+<div><label>Firma Fiyatı (TL)</label><input id="firmPrice" inputmode="decimal" placeholder="0,00"></div>
+<div><label>Perakende Fiyatı (TL)</label><input id="retailPrice" inputmode="decimal" placeholder="0,00"></div>
+</div>
+<div>
+<label>Servis Fiyatı (TL)</label>
+<input id="servicePrice" inputmode="decimal" placeholder="0,00">
 </div>
 <div class="row">
 <div><label>İşlem</label><select id="action"><option>Stok bilgisi</option><option>Stoka eklendi</option><option>Stoktan çıktı</option><option>Müşteride kullanıldı</option><option>Emanet verildi</option><option>Emanet geri geldi</option></select></div>
@@ -188,7 +196,7 @@ textarea{min-height:80px;resize:vertical}.row{display:grid;grid-template-columns
 </div>
 </div>
 </main>
-<footer>TEST 5.3 • Fiyat sepeti düzeltildi • Sepete ekleme onayı • Araç/Depo stok • Market tipi “diit” sesi</footer>
+<footer>TEST 5.5 • Yönetim Parça Ekleme • Firma + Perakende + Servis fiyatı aynı anda • PC fiyat otoritesi • Fiyat sepeti</footer>
 
 <script src="https://cdn.jsdelivr.net/npm/@ericblade/quagga2@1.8.4/dist/quagga.min.js"></script>
 <script>
@@ -256,11 +264,64 @@ function setCatalogCache(v){cloudCatalog=v||{};localStorage.setItem('ot_pb_catal
 function eanCheck(base){let s=0;for(let i=0;i<base.length;i++)s+=Number(base[i])*(i%2===0?1:3);return String((10-(s%10))%10)}
 function localGeneratedBarcode(){let core='2909'+String(Date.now()).slice(-7)+String(Math.floor(Math.random()*10));return core+eanCheck(core)}
 async function generateUniqueBarcode(){for(let i=0;i<5;i++){let b=localGeneratedBarcode();if(!cloudReady)return b;try{let exists=await cloudFetch(cloudDbUrl('catalogV1/items/'+safeKey(b)));if(!exists)return b}catch(e){return b}}return localGeneratedBarcode()}
-function pricePayload(type,price){let v=Number(String(price||'0').replace(',','.'))||0,r={firmPrice:0,retailPrice:0,servicePrice:0};if(type==='Firma')r.firmPrice=v;else if(type==='Perakende')r.retailPrice=v;else r.servicePrice=v;return r}
-async function pushCatalogItem(x){if(!cloudReady||!cloudIdToken)return false;let prices=pricePayload(x.priceType,x.price),initialWarehouse=(x.action==='Stoka eklendi'?Math.max(0,Number(x.qty||0)):undefined),payload={barcode:x.barcode,name:x.name||'',brand:x.model||'',model:x.model||'',photo:x.photo||'',...prices,warehouse:initialWarehouse,updatedAt:new Date().toISOString(),source:'Parça Barkod Saha',sourceUser:'Saha'};await cloudFetch(cloudDbUrl('catalogV1/items/'+safeKey(x.barcode)),{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});return true}
+function nPrice(v){return Number(String(v??'0').replace(',','.'))||0}
+function pricePayload(type,price){let v=nPrice(price),r={firmPrice:0,retailPrice:0,servicePrice:0};if(type==='Firma')r.firmPrice=v;else if(type==='Perakende')r.retailPrice=v;else r.servicePrice=v;return r}
+function recordPrices(x){
+ if(!x)return {firmPrice:0,retailPrice:0,servicePrice:0};
+ if(x.firmPrice!==undefined||x.retailPrice!==undefined||x.servicePrice!==undefined){
+  return {firmPrice:nPrice(x.firmPrice),retailPrice:nPrice(x.retailPrice),servicePrice:nPrice(x.servicePrice)};
+ }
+ return pricePayload(x.priceType,x.price);
+}
+async function pushCatalogItem(x){
+ if(!cloudReady||!cloudIdToken)return false;
+ let prices=recordPrices(x),
+     initialWarehouse=(x.action==='Stoka eklendi'?Math.max(0,Number(x.qty||0)):undefined),
+     payload={
+       barcode:x.barcode,name:x.name||'',brand:x.model||'',model:x.model||'',photo:x.photo||'',
+       firmPrice:prices.firmPrice,retailPrice:prices.retailPrice,servicePrice:prices.servicePrice,
+       warehouse:initialWarehouse,updatedAt:new Date().toISOString(),
+       source:'Parça Barkod Saha',sourceUser:'Yönetim Mobil'
+     };
+ await cloudFetch(cloudDbUrl('catalogV1/items/'+safeKey(x.barcode)),{
+   method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)
+ });
+ return true
+}
 async function connectCloud(){let email=($('cloudEmail').value||localStorage.getItem('ot_pb_cloud_email')||'').trim(),pass=$('cloudPass').value||'';if(!email||!pass){cloudMsg('E-posta ve şifre gerekli.','cloudBad');return false}localStorage.setItem('ot_pb_cloud_email',email);cloudMsg('Buluta bağlanılıyor...');try{await cloudLogin(email,pass);cloudReady=true;$('cloudPass').value='';cloudMsg('● Bulut bağlı · kayıtlar PC ile ortak','cloudOk');await pullCloudCatalog(true);await syncLocalToCloud(true);return true}catch(e){cloudReady=false;cloudMsg('Bağlantı kurulamadı: '+String(e.message||e),'cloudBad');return false}}
 async function autoCloud(){try{if(await cloudRefresh()){cloudMsg('● Bulut otomatik bağlı · PC ile ortak','cloudOk');await pullCloudCatalog(true);await syncLocalToCloud(true);return true}}catch(e){}cloudReady=false;cloudMsg('İlk bağlantı için Buluta Bağlan ile giriş yapın.','cloudWarn');return false}
-async function pullCloudCatalog(silent){if(!cloudReady)return false;try{let cat=await cloudFetch(cloudDbUrl('catalogV1/items'))||{},stock=await cloudFetch(cloudDbUrl('stock'))||{},cache={};for(const x of Object.values(stock)){if(x&&x.barcode)cache[String(x.barcode)]={barcode:String(x.barcode),name:x.name||'',model:x.brand||'',photo:x.photo||'',firmPrice:Number(x.firmPrice||0),retailPrice:Number(x.retailPrice||0),servicePrice:Number(x.servicePrice||0),warehouse:Number(x.warehouse||0),vehicle:Number(x.vehicle||0)}}for(const x of Object.values(cat)){if(!x||!x.barcode)continue;let b=String(x.barcode),z=cache[b]||{};cache[b]={...z,barcode:b,name:x.name||z.name||'',model:x.brand||x.model||z.model||'',photo:x.photo||z.photo||'',firmPrice:Number(x.firmPrice||z.firmPrice||0),retailPrice:Number(x.retailPrice||z.retailPrice||0),servicePrice:Number(x.servicePrice||z.servicePrice||0)}}setCatalogCache(cache);if(!silent)cloudMsg('● Buluttan '+Object.keys(cache).length+' parça bilgisi alındı.','cloudOk');return true}catch(e){if(!silent)cloudMsg('Parçalar alınamadı: '+String(e.message||e),'cloudBad');return false}}
+async function pullCloudCatalog(silent){
+ if(!cloudReady)return false;
+ try{
+  let cat=await cloudFetch(cloudDbUrl('catalogV1/items'))||{},
+      stock=await cloudFetch(cloudDbUrl('stock'))||{},cache={};
+  // Önce mobil katalog: fotoğraf/isim gibi yardımcı bilgiler.
+  for(const x of Object.values(cat)){
+   if(!x||!x.barcode)continue;
+   let b=String(x.barcode);
+   cache[b]={barcode:b,name:x.name||'',model:x.brand||x.model||'',photo:x.photo||'',
+     firmPrice:Number(x.firmPrice||0),retailPrice:Number(x.retailPrice||0),
+     servicePrice:Number(x.servicePrice||0),warehouse:Number(x.warehouse||0),vehicle:Number(x.vehicle||0)};
+  }
+  // Sonra PC stock kaydı: FİYAT ve STOKTA PC kesin otorite.
+  for(const x of Object.values(stock)){
+   if(!x||!x.barcode)continue;
+   let b=String(x.barcode),z=cache[b]||{barcode:b};
+   cache[b]={...z,barcode:b,
+     name:x.name||z.name||'',model:x.brand||z.model||'',photo:x.photo||z.photo||'',
+     firmPrice:Number(x.firmPrice??z.firmPrice??0),
+     retailPrice:Number(x.retailPrice??z.retailPrice??0),
+     servicePrice:Number(x.servicePrice??z.servicePrice??0),
+     warehouse:Number(x.warehouse??0),vehicle:Number(x.vehicle??0)};
+  }
+  setCatalogCache(cache);
+  if(!silent)cloudMsg('● PC fiyat/stok otoritesiyle '+Object.keys(cache).length+' parça alındı.','cloudOk');
+  return true
+ }catch(e){
+  if(!silent)cloudMsg('Parçalar alınamadı: '+String(e.message||e),'cloudBad');
+  return false
+ }
+}
 function catalogRecordForBarcode(b){let cache=cloudCatalog&&Object.keys(cloudCatalog).length?cloudCatalog:getCatalogCache();return cache[String(b||'')]||null}
 function applyCatalogToForm(x){if(!x)return;if(!$('name').value)$('name').value=x.name||'';if(!$('model').value)$('model').value=x.model||'';if(!photoData&&x.photo){photoData=x.photo;$('preview').src=photoData;$('preview').style.display='block'}let pt=$('priceType').value;if(!$('price').value){let p=pt==='Firma'?x.firmPrice:pt==='Perakende'?x.retailPrice:x.servicePrice;if(Number(p)>0)$('price').value=String(p)}}
 async function afterBarcodeEntered(){let b=$('barcode').value.trim();if(!b)return;let loc=getAll().find(x=>String(x.barcode)===b);if(loc){$('name').value=loc.name||$('name').value;$('model').value=loc.model||$('model').value;if(loc.photo&&!photoData){photoData=loc.photo;$('preview').src=photoData;$('preview').style.display='block'}}let c=catalogRecordForBarcode(b);if(c)applyCatalogToForm(c);else if(cloudReady){await pullCloudCatalog(true);c=catalogRecordForBarcode(b);if(c)applyCatalogToForm(c)}}
@@ -329,7 +390,16 @@ function queueLookup(){clearTimeout(lookupTypingTimer);lookupTypingTimer=setTime
 function allLookupItems(){
  let map=new Map(),cache=cloudCatalog&&Object.keys(cloudCatalog).length?cloudCatalog:getCatalogCache();
  Object.values(cache||{}).forEach(x=>{if(x&&x.barcode)map.set(String(x.barcode),{...x,barcode:String(x.barcode)})});
- getAll().forEach(x=>{let b=String(x.barcode||'');if(!b)return;let z=map.get(b)||{barcode:b};let pp=pricePayload(x.priceType,x.price);map.set(b,{...z,barcode:b,name:z.name||x.name||'',model:z.model||x.model||'',photo:z.photo||x.photo||'',firmPrice:Number(z.firmPrice||pp.firmPrice||0),retailPrice:Number(z.retailPrice||pp.retailPrice||0),servicePrice:Number(z.servicePrice||pp.servicePrice||0),warehouse:Number(z.warehouse||0),vehicle:Number(z.vehicle||0)})});
+ getAll().forEach(x=>{
+  // Buluta daha önce başarıyla gitmiş eski telefon geçmişi katalog otoritesi değildir.
+  // Yalnız çevrimdışıyken veya bekleyen yeni kayıtsa aramaya eklenir.
+  if(cloudReady && !x.cloudPending)return;
+  let b=String(x.barcode||'');if(!b)return;
+  let z=map.get(b)||{barcode:b},pp=recordPrices(x);
+  map.set(b,{...z,barcode:b,name:z.name||x.name||'',model:z.model||x.model||'',photo:z.photo||x.photo||'',
+    firmPrice:Number(z.firmPrice||pp.firmPrice||0),retailPrice:Number(z.retailPrice||pp.retailPrice||0),
+    servicePrice:Number(z.servicePrice||pp.servicePrice||0),warehouse:Number(z.warehouse||0),vehicle:Number(z.vehicle||0)})
+});
  return [...map.values()];
 }
 function scoreLookupItem(x,q){
@@ -437,13 +507,36 @@ async function saveItem(){
  let n=$('name').value.trim(),b=$('barcode').value.trim();if(!n&&!b){alert('Parça adı veya barkod girin.');return}
  if(!b){b=await generateUniqueBarcode();$('barcode').value=b;$('scanMsg').textContent='Barkodu olmayan ürün için yeni barkod oluşturuldu: '+b}
  if(!n){let c=catalogRecordForBarcode(b);n=(c&&c.name)||'İsimsiz parça'}
- let a=getAll(),existing=a.find(x=>String(x.barcode)===String(b));let rec={id:existing?existing.id:Date.now(),barcode:b,name:n,model:$('model').value.trim(),priceType:$('priceType').value,price:$('price').value.trim(),action:$('action').value,qty:$('qty').value.trim()||'1',customer:$('customer').value.trim(),note:$('note').value.trim(),photo:photoData||(existing&&existing.photo)||'',date:new Date().toLocaleString('tr-TR'),updatedAt:new Date().toISOString(),cloudPending:true,syncedAt:existing&&existing.syncedAt||''};
+ let a=getAll(),existing=a.find(x=>String(x.barcode)===String(b));
+ let rec={
+  id:existing?existing.id:Date.now(),
+  barcode:b,name:n,model:$('model').value.trim(),
+  firmPrice:$('firmPrice').value.trim(),
+  retailPrice:$('retailPrice').value.trim(),
+  servicePrice:$('servicePrice').value.trim(),
+  action:$('action').value,qty:$('qty').value.trim()||'1',
+  customer:$('customer').value.trim(),note:$('note').value.trim(),
+  photo:photoData||(existing&&existing.photo)||'',
+  date:new Date().toLocaleString('tr-TR'),updatedAt:new Date().toISOString(),
+  cloudPending:true,syncedAt:existing&&existing.syncedAt||''
+ };
  if(existing)a=a.map(x=>String(x.barcode)===String(b)?rec:x);else a.unshift(rec);setAll(a);
  if(cloudReady){try{await pushCatalogItem(rec);rec.cloudPending=false;rec.syncedAt=new Date().toISOString();setAll(getAll().map(x=>String(x.barcode)===String(b)?rec:x));cloudMsg('● '+n+' PC ortak bulutuna gönderildi.','cloudOk')}catch(e){cloudMsg('Kayıt telefonda saklandı; buluta gönderilemedi: '+String(e.message||e),'cloudBad')}}
  clearForm();render();alert(cloudReady?'Kayıt tamamlandı ve buluta gönderildi.':'Kayıt telefonda saklandı. Buluta bağlanınca otomatik gönderilecek.');
 }
-async function syncLocalToCloud(silent){if(!cloudReady){if(!silent)cloudMsg('Önce buluta bağlanın.','cloudWarn');return false}let a=getAll(),ok=0,fail=0;for(const x of a){try{await pushCatalogItem(x);x.cloudPending=false;x.syncedAt=new Date().toISOString();ok++}catch(e){x.cloudPending=true;fail++}}setAll(a);render();if(!silent)cloudMsg('Senkron tamamlandı · '+ok+' parça gönderildi'+(fail?' · '+fail+' hata':''),fail?'cloudWarn':'cloudOk');return fail===0}
-function clearForm(){['barcode','name','model','price','customer','note'].forEach(x=>$(x).value='');$('qty').value='1';$('photo').value='';photoData='';$('preview').src='';$('preview').style.display='none';stopScanner()}
+async function syncLocalToCloud(silent){
+ if(!cloudReady){if(!silent)cloudMsg('Önce buluta bağlanın.','cloudWarn');return false}
+ let a=getAll(),ok=0,fail=0,skipped=0;
+ for(const x of a){
+  if(!x.cloudPending){skipped++;continue}
+  try{await pushCatalogItem(x);x.cloudPending=false;x.syncedAt=new Date().toISOString();ok++}
+  catch(e){x.cloudPending=true;fail++}
+ }
+ setAll(a);render();
+ if(!silent)cloudMsg('Senkron · '+ok+' yeni/bekleyen gönderildi'+(skipped?' · '+skipped+' eski kayıt yeniden gönderilmedi':'')+(fail?' · '+fail+' hata':''),fail?'cloudWarn':'cloudOk');
+ return fail===0
+}
+function clearForm(){['barcode','name','model','firmPrice','retailPrice','servicePrice','customer','note'].forEach(x=>{if($(x))$(x).value=''});$('qty').value='1';$('photo').value='';photoData='';$('preview').src='';$('preview').style.display='none';stopScanner()}
 function delItem(id){if(confirm('Bu kayıt silinsin mi?')){setAll(getAll().filter(x=>x.id!==id));render()}}
 function render(){
  const all=getAll(), q=($('search')?.value||'').toLocaleLowerCase('tr-TR');
@@ -451,7 +544,7 @@ function render(){
  $('sCount').textContent=all.length;
  $('sEmanet').textContent=all.filter(x=>x.action==='Emanet verildi').length;
  $('sUsed').textContent=all.filter(x=>x.action==='Müşteride kullanıldı').length;
- $('list').innerHTML=a.length?a.map(x=>`<div class="item">${x.photo?`<img src="${x.photo}" onclick="window.open(this.src,'_blank')">`:''}<b>${esc(x.name||'İsimsiz parça')}</b><small>${esc(x.barcode||'Barkod yok')} • ${esc(x.model||'Model yok')}</small><br><span class="badge">${esc(x.action)}</span><span class="badge">Adet: ${esc(x.qty)}</span><span class="badge">${esc(x.priceType)} ${esc(x.price||'')} TL</span><span class="badge ${x.cloudPending?'pendingBadge':'syncBadge'}">${x.cloudPending?'Bulut bekliyor':'Bulut ✓'}</span><div style="clear:both"></div><small>${esc(x.customer||'Müşteri/Firma yok')} • ${esc(x.date)}${x.note?' • '+esc(x.note):''}</small><button class="btn red" style="padding:8px;margin-top:8px" onclick="delItem(${x.id})">SİL</button></div>`).join(''):'<div class="msg">Kayıt bulunamadı.</div>';
+ $('list').innerHTML=a.length?a.map(x=>`<div class="item">${x.photo?`<img src="${x.photo}" onclick="window.open(this.src,'_blank')">`:''}<b>${esc(x.name||'İsimsiz parça')}</b><small>${esc(x.barcode||'Barkod yok')} • ${esc(x.model||'Model yok')}</small><br><span class="badge">${esc(x.action)}</span><span class="badge">Adet: ${esc(x.qty)}</span><span class="badge">Firma: ${moneyTR(recordPrices(x).firmPrice)}</span><span class="badge">Perakende: ${moneyTR(recordPrices(x).retailPrice)}</span><span class="badge">Servis: ${moneyTR(recordPrices(x).servicePrice)}</span><span class="badge ${x.cloudPending?'pendingBadge':'syncBadge'}">${x.cloudPending?'Bulut bekliyor':'Bulut ✓'}</span><div style="clear:both"></div><small>${esc(x.customer||'Müşteri/Firma yok')} • ${esc(x.date)}${x.note?' • '+esc(x.note):''}</small><button class="btn red" style="padding:8px;margin-top:8px" onclick="delItem(${x.id})">SİL</button></div>`).join(''):'<div class="msg">Kayıt bulunamadı.</div>';
 }
 function exportBackup(){
  const blob=new Blob([JSON.stringify({app:'Onur Teknik Parça Barkod',version:3,exported:new Date().toISOString(),items:getAll()},null,2)],{type:'application/json'});
