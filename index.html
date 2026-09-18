@@ -188,7 +188,7 @@ textarea{min-height:80px;resize:vertical}.row{display:grid;grid-template-columns
 </div>
 </div>
 </main>
-<footer>TEST 5.2 • Kamera üstte • Market tipi “diit” barkod sesi • Yönetim altta • Servis fiyatı • Araç/Depo stok • Fiyat sepeti</footer>
+<footer>TEST 5.3 • Fiyat sepeti düzeltildi • Sepete ekleme onayı • Araç/Depo stok • Market tipi “diit” sesi</footer>
 
 <script src="https://cdn.jsdelivr.net/npm/@ericblade/quagga2@1.8.4/dist/quagga.min.js"></script>
 <script>
@@ -353,7 +353,7 @@ function renderTopResult(x){
  if(!x){el.className='lookupTopEmpty';el.innerHTML='Barkodu okutun veya aşağıdaki kutuya parça adını / kodunu yazın. Bulunan parçanın resmi, servis fiyatı ve araç-depo stoku burada görünecek.';return}
  el.className='';let pic=x.photo?`<img src="${x.photo}" onclick="window.open(this.src,'_blank')" alt="Parça">`:'<div class="noPhoto">Ürün fotoğrafı yok</div>';
  let p=servicePriceOf(x);
- el.innerHTML=`<div class="topProduct">${pic}<div><div class="topProductName">${esc(x.name||'İsimsiz parça')}</div><div class="lookupCode">${esc(x.model||'')} ${x.barcode?' · '+esc(x.barcode):''}</div><div class="servicePrice"><small>SERVİS FİYATI</small>${p>0?moneyTR(p):'Tanımlı değil'}</div><div class="stockBoxes"><div class="stockBox">ARAÇ<b>${Number(x.vehicle||0)}</b></div><div class="stockBox">DEPO<b>${Number(x.warehouse||0)}</b></div></div></div></div><button class="btn green" onclick="addCurrentToCart()">FİYAT SEPETİNE EKLE</button>`;
+ el.innerHTML=`<div class="topProduct">${pic}<div><div class="topProductName">${esc(x.name||'İsimsiz parça')}</div><div class="lookupCode">${esc(x.model||'')} ${x.barcode?' · '+esc(x.barcode):''}</div><div class="servicePrice"><small>SERVİS FİYATI</small>${p>0?moneyTR(p):'Tanımlı değil'}</div><div class="stockBoxes"><div class="stockBox">ARAÇ<b>${Number(x.vehicle||0)}</b></div><div class="stockBox">DEPO<b>${Number(x.warehouse||0)}</b></div></div></div></div><button type="button" id="addQuoteBtn" class="btn green" style="user-select:none;-webkit-user-select:none;touch-action:manipulation" onclick="addCurrentToCart(event)">FİYAT SEPETİNE EKLE</button>`;
 }
 function selectLookupResult(i){let x=lastLookupResults[i];if(!x)return;renderTopResult(x);$('lookupTopCard').scrollIntoView({behavior:'smooth',block:'start'})}
 function resultCard(x,i,similarity){
@@ -366,11 +366,56 @@ function renderLookup(arr=[],mode=''){
  el.innerHTML=arr.map((x,i)=>resultCard(x,i,x._similarity)).join('');$('lookupSummary').textContent=(mode==='photo'?'Fotoğrafa en yakın ':'Bulunan ')+arr.length+' kayıt gösteriliyor.';
  if(mode!=='photo')$('lookupTopCard').scrollIntoView({behavior:'smooth',block:'start'});
 }
-function saveQuoteCart(){localStorage.setItem('ot_pb_quote_cart_v1',JSON.stringify(quoteCart));renderQuoteCart()}
-function addCurrentToCart(){let x=currentLookupItem;if(!x)return;let b=String(x.barcode||x.name||Date.now()),old=quoteCart.find(z=>String(z.key)===b);if(old)old.qty=Number(old.qty||1)+1;else quoteCart.push({key:b,barcode:x.barcode||'',name:x.name||'İsimsiz parça',price:servicePriceOf(x),qty:1});saveQuoteCart()}
-function removeCartItem(i){quoteCart.splice(i,1);saveQuoteCart()}
-function clearQuoteCart(){if(!quoteCart.length)return;if(confirm('Fiyat sepeti temizlensin mi?')){quoteCart=[];saveQuoteCart()}}
-function renderQuoteCart(){let el=$('quoteCart');if(!el)return;if(!quoteCart.length){el.innerHTML='<div class="lookupHint">Sepet boş. Müşteriye teklif edeceğiniz parçaları yukarıdaki sonuçtan ekleyin.</div>';return}let total=0;el.innerHTML=quoteCart.map((x,i)=>{let qty=Number(x.qty||1),v=Number(x.price||0)*qty;total+=v;return `<div class="cartRow"><div><div class="cartName">${esc(x.name)}</div><div class="cartMeta">${qty} adet${x.barcode?' · '+esc(x.barcode):''}</div><button class="miniBtn" onclick="removeCartItem(${i})">ÇIKAR</button></div><div class="cartPrice">${moneyTR(v)}</div></div>`}).join('')+`<div class="cartTotal"><span>TOPLAM TEKLİF</span><b>${moneyTR(total)}</b></div>`}
+function showMiniNotice(msg,ok=true){
+ let n=document.getElementById('miniNotice');
+ if(!n){
+  n=document.createElement('div');
+  n.id='miniNotice';
+  n.style.cssText='position:fixed;left:50%;bottom:84px;transform:translateX(-50%);z-index:99999;padding:12px 18px;border-radius:14px;font-weight:800;font-size:16px;box-shadow:0 8px 30px #0008;max-width:88%;text-align:center';
+  document.body.appendChild(n);
+ }
+ n.style.background=ok?'#18b66a':'#d84a4a';
+ n.style.color='#fff';
+ n.textContent=msg;
+ n.style.display='block';
+ clearTimeout(window.__miniNoticeTimer);
+ window.__miniNoticeTimer=setTimeout(()=>{n.style.display='none'},1500);
+}
+function saveQuoteCart(){
+ renderQuoteCart();
+ try{
+  localStorage.setItem('ot_pb_quote_cart_v1',JSON.stringify(quoteCart));
+  return true;
+ }catch(e){
+  // Telefonun yerel hafızası dolu olsa bile sepet ekranda çalışmaya devam etsin.
+  console.warn('Fiyat sepeti yerel hafızaya yazılamadı',e);
+  return false;
+ }
+}
+function addCurrentToCart(ev){
+ if(ev){ev.preventDefault();ev.stopPropagation()}
+ let x=currentLookupItem;
+ if(!x){showMiniNotice('Önce bir parça bulun.',false);return false}
+ let price=Number(servicePriceOf(x)||0);
+ if(!(price>0)){showMiniNotice('Servis fiyatı tanımlı değil.',false);return false}
+ let b=String(x.barcode||x.name||Date.now());
+ let old=quoteCart.find(z=>String(z.key)===b);
+ if(old) old.qty=Number(old.qty||1)+1;
+ else quoteCart.push({key:b,barcode:x.barcode||'',name:x.name||'İsimsiz parça',price:price,qty:1});
+ let stored=saveQuoteCart();
+ let btn=document.getElementById('addQuoteBtn');
+ if(btn){
+  let oldText=btn.textContent;
+  btn.textContent='✓ SEPETE EKLENDİ';
+  btn.disabled=true;
+  setTimeout(()=>{btn.disabled=false;btn.textContent='FİYAT SEPETİNE EKLE'},900);
+ }
+ showMiniNotice((x.name||'Parça')+' sepete eklendi'+(stored?'':' • geçici'));
+ return false;
+}
+function removeCartItem(i){quoteCart.splice(i,1);saveQuoteCart();showMiniNotice('Parça sepetten çıkarıldı.')}
+function clearQuoteCart(){if(!quoteCart.length)return;if(confirm('Fiyat sepeti temizlensin mi?')){quoteCart=[];saveQuoteCart();showMiniNotice('Fiyat sepeti temizlendi.')}}
+function renderQuoteCart(){let el=$('quoteCart');if(!el)return;if(!quoteCart.length){el.innerHTML='<div class="lookupHint">Sepet boş. Müşteriye teklif edeceğiniz parçaları yukarıdaki sonuçtan ekleyin.</div>';return}let total=0;el.innerHTML='<div class="msg" style="border:1px solid #2fcb7b">Sepette '+quoteCart.reduce((s,x)=>s+Number(x.qty||1),0)+' parça var.</div>'+quoteCart.map((x,i)=>{let qty=Number(x.qty||1),v=Number(x.price||0)*qty;total+=v;return `<div class="cartRow"><div><div class="cartName">${esc(x.name)}</div><div class="cartMeta">${qty} adet${x.barcode?' · '+esc(x.barcode):''}</div><button class="miniBtn" onclick="removeCartItem(${i})">ÇIKAR</button></div><div class="cartPrice">${moneyTR(v)}</div></div>`}).join('')+`<div class="cartTotal"><span>TOPLAM TEKLİF</span><b>${moneyTR(total)}</b></div>`}
 async function startLookupScanner(){
  stopLookupScanner();if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){$('lookupScanMsg').textContent='Kamera desteklenmiyor. Barkod fotoğrafı seçebilirsiniz.';return}
  try{lookupStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}}});$('lookupVideo').srcObject=lookupStream;await $('lookupVideo').play();$('lookupVideoWrap').style.display='block';setTimeout(()=>{$('scannerCard')&&$('scannerCard').scrollIntoView({behavior:'smooth',block:'start'})},80);if('BarcodeDetector' in window){let fm=['code_128','ean_13','ean_8','upc_a','upc_e','qr_code','data_matrix'];try{lookupDetector=new BarcodeDetector({formats:fm})}catch(e){lookupDetector=new BarcodeDetector()}$('lookupScanMsg').textContent='Barkodu kameraya tutun.';lookupScanLoop()}else{$('lookupScanMsg').textContent='Bu tarayıcı canlı otomatik okumayı desteklemiyor. Barkod fotoğrafı seçin.'}}catch(e){$('lookupScanMsg').textContent='Kamera açılamadı. Kamera iznini kontrol edin.'}
