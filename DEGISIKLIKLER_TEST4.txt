@@ -1,0 +1,11 @@
+ONUR TEKNİK PARÇA/BARKOD TEST 4
+
+- Yeni FİYAT / PARÇA BUL sekmesi eklendi.
+- Ürün adı, marka/model, ürün kodu veya barkodla arama yapılır.
+- Sonuçta Perakende / Firma / Saha fiyatları ve Depo / Araç stokları birlikte görünür.
+- Barkod kameradan okutularak doğrudan fiyat bulunur.
+- Barkod fotoğrafı veya ekran görüntüsünden barkod okuma eklendi (BarcodeDetector + Quagga2 yedeği).
+- Parçanın gerçek fotoğrafı çekilerek kayıtlı ürün fotoğraflarıyla benzerlik araması yapılır. Fotoğraf araması yardımcı eşleştirmedir; barkod kadar kesin değildir.
+- PC'DEN GÜNCEL FİYATLARI AL düğmesi eklendi.
+- Telefonda yeni parça Stoka eklendi olarak kaydedilirse ilk adet PC'ye başlangıç depo stoğu olarak iletilir. Mevcut ürün stok yönetimi yine PC yöneticisinde kalır.
+- TEST 3 bulut/fotoğraf/barkod özellikleri korunur.

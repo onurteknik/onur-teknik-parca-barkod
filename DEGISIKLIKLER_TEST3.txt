@@ -1,0 +1,12 @@
+ONUR TEKNIK PARCA / BARKOD - TEST 3
+
+- Android + iPhone ortak PWA.
+- Parca fotografi cekilir ve sikistirilip kaydedilir.
+- Mevcut barkod varsa ayni barkod kullanilir.
+- Barkod yoksa otomatik benzersiz 13 haneli barkod uretilir.
+- Ayni barkod tekrar kaydedilirse yerelde ve bulutta yeni urun kopyasi olusturulmaz; mevcut kart guncellenir.
+- Firebase bulutuna catalogV1/items altinda urun adi, marka/model, barkod, fiyat bilgisi ve fotograf gonderilir.
+- PC stok miktari telefondan serbestce degistirilmez; ana stok yetkisi PC'dedir.
+- PC'deki stock ve catalog verileri telefona alinabilir; barkod okutulunca bilinen urun adi/fotografi/fiyati forma gelir.
+- Ilk e-posta/sifre girisinden sonra refresh token ile otomatik baglanma denenir.
+- Bulut yoksa kayit telefonda bekler; baglanti gelince otomatik senkron denenir.
