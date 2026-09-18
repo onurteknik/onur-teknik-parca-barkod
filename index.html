@@ -14,7 +14,7 @@ header{padding:14px 14px 12px;border-bottom:1px solid var(--line);position:stick
 .brand{display:flex;align-items:center;gap:11px}.brand img{width:52px;height:52px;border-radius:12px}
 .brand b{font-size:17px}.brand small{display:block;color:var(--muted);margin-top:2px}
 main{padding:12px;max-width:760px;margin:auto}.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:13px;margin-bottom:12px}
-h2{font-size:16px;margin:0 0 10px}.tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:12px}
+h2{font-size:16px;margin:0 0 10px}.tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-bottom:12px}
 .tab{padding:10px 6px;border-radius:11px;background:#2b3037;text-align:center;font-size:12px;font-weight:700;border:1px solid #3b424b}
 .tab.active{background:var(--accent);color:#101010}
 label{display:block;color:var(--muted);font-size:12px;margin:9px 0 5px}
@@ -30,7 +30,10 @@ textarea{min-height:80px;resize:vertical}.row{display:grid;grid-template-columns
 .item b{display:block}.item small{color:var(--muted)}.badge{display:inline-block;background:#2e343c;border-radius:999px;padding:4px 8px;font-size:11px;margin:5px 4px 0 0}
 .search{margin-bottom:8px}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.stat{background:#181c21;border:1px solid var(--line);padding:9px;border-radius:11px;text-align:center}.stat b{font-size:17px;display:block}.stat small{color:var(--muted)}
 .hidden{display:none}footer{text-align:center;color:#7f8994;font-size:11px;padding:8px 14px 24px}
-@media(max-width:520px){.row{grid-template-columns:1fr}.tabs{grid-template-columns:1fr 1fr 1fr}}
+@media(max-width:520px){.row{grid-template-columns:1fr}.tabs{grid-template-columns:1fr 1fr}.tab{min-height:44px}.lookupGrid{grid-template-columns:1fr}}
+
+
+.lookupGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.lookupResult{border:1px solid var(--line);border-radius:14px;padding:11px;margin-top:9px;background:#181c21}.lookupResult img{width:92px;height:92px;object-fit:contain;border-radius:10px;background:#0f1216;border:1px solid var(--line);float:right;margin-left:10px;cursor:pointer}.lookupName{font-size:16px;font-weight:800;margin-bottom:4px}.lookupCode{font-size:12px;color:var(--muted);word-break:break-all}.priceLine{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.pricePill{display:inline-block;padding:6px 8px;border-radius:9px;background:#292f36;font-size:12px}.pricePill strong{color:#ffb66e}.stockLine{font-size:12px;color:#cfd6dd;margin-top:8px}.lookupHint{font-size:11px;color:#9ba5af;line-height:1.4}.lookupPhoto{display:none;width:100%;max-height:220px;object-fit:contain;border-radius:11px;border:1px solid var(--line);margin-top:8px;background:#111}.similarity{display:inline-block;background:#263b2e;color:#9fe2b5;border-radius:999px;padding:4px 7px;font-size:11px;margin-top:6px}
 
 .cloudStatus{padding:10px;border-radius:10px;background:#20262d;border:1px solid var(--line);font-size:12px;margin:8px 0}.cloudOk{color:#7ee2a8}.cloudWarn{color:#ffd37a}.cloudBad{color:#ff8d8d}.syncBadge{background:#163e2c;color:#91efb8}.pendingBadge{background:#49391f;color:#ffd37a}
 
@@ -41,6 +44,7 @@ textarea{min-height:80px;resize:vertical}.row{display:grid;grid-template-columns
 <main>
 <div class="tabs">
 <div class="tab active" onclick="showTab('kayit',this)">YENİ KAYIT</div>
+<div class="tab" onclick="showTab('fiyat',this)">FİYAT / PARÇA BUL</div>
 <div class="tab" onclick="showTab('liste',this)">PARÇALAR</div>
 <div class="tab" onclick="showTab('yedek',this)">YEDEK</div>
 </div>
@@ -81,6 +85,46 @@ textarea{min-height:80px;resize:vertical}.row{display:grid;grid-template-columns
 </div>
 </section>
 
+<section id="fiyat" class="hidden">
+<div class="card">
+<h2>Fiyat / Parça Bul</h2>
+<div class="msg">Müşteriye fiyat verirken burayı kullanın. Ürün kodu, barkod, parça adı veya marka/model ile arayabilirsiniz.</div>
+<label>Parça adı / ürün kodu / barkod / marka</label>
+<input id="lookupQuery" placeholder="Örn. Wika, 869000..., Vaillant, fan motoru" onkeydown="if(event.key==='Enter'){event.preventDefault();lookupText()}">
+<div class="row">
+<button class="btn orange" onclick="lookupText()">PARÇAYI / FİYATI BUL</button>
+<button class="btn dark" onclick="refreshLookupCatalog()">PC'DEN GÜNCEL FİYATLARI AL</button>
+</div>
+<div id="lookupMsg" class="msg">Arama için bir isim, marka, barkod veya ürün kodu yazın.</div>
+</div>
+
+<div class="card">
+<h2>Barkoddan Bul</h2>
+<div class="row">
+<button class="btn orange" onclick="startLookupScanner()">BARKODU KAMERADAN OKUT</button>
+<button class="btn dark" onclick="stopLookupScanner()">KAMERAYI KAPAT</button>
+</div>
+<div id="lookupVideoWrap" style="display:none;margin-top:9px;position:relative"><video id="lookupVideo" class="video" playsinline muted></video><div class="scanline"></div></div>
+<div id="lookupScanMsg" class="msg">Barkodu kameraya tutun veya barkodun fotoğrafını seçin.</div>
+<label>Barkod fotoğrafı / ekran görüntüsü</label>
+<input id="barcodePhoto" type="file" accept="image/*" capture="environment">
+</div>
+
+<div class="card">
+<h2>Parça Fotoğrafıyla Ara</h2>
+<div class="msg">Parçanın fotoğrafını çekip kayıtlı ürün fotoğraflarıyla karşılaştırır. Bu yardımcı eşleştirmedir; barkod kadar kesin değildir.</div>
+<input id="partSearchPhoto" type="file" accept="image/*" capture="environment">
+<img id="lookupPhotoPreview" class="lookupPhoto" alt="Aranan parça fotoğrafı">
+<button class="btn orange" onclick="searchByPhoto()">FOTOĞRAFLA BENZER PARÇAYI BUL</button>
+</div>
+
+<div class="card">
+<h2>Bulunan Parçalar / Fiyatlar</h2>
+<div id="lookupSummary" class="lookupHint">Henüz arama yapılmadı.</div>
+<div id="lookupResults"></div>
+</div>
+</section>
+
 <section id="liste" class="hidden">
 <div class="card">
 <h2>Parça Kayıtları</h2>
@@ -113,11 +157,14 @@ textarea{min-height:80px;resize:vertical}.row{display:grid;grid-template-columns
 </div>
 </section>
 </main>
-<footer>TEST 3 • Android + iPhone ortak saha • Parça fotoğrafı + barkod + PC bulut senkronu</footer>
+<footer>TEST 4 • Fiyat / Parça Bul • Barkod fotoğrafı • Fotoğrafla benzer parça • PC bulut senkronu</footer>
 
+<script src="https://cdn.jsdelivr.net/npm/@ericblade/quagga2@1.8.4/dist/quagga.min.js"></script>
 <script>
 const $=id=>document.getElementById(id);
 let photoData='', stream=null, detector=null, scanTimer=null;
+let lookupStream=null,lookupDetector=null,lookupTimer=null,lookupPhotoData='';
+const photoSigCache=new Map();
 let cloudReady=false, cloudIdToken='', cloudRefreshToken='', cloudCatalog={};
 const CLOUD_CFG={workspace:'ONURTEKNIK',apiKey:'AIzaSyCq82p2fLOpssU8OO8Fg9GbD0qu2t-WaVU',databaseURL:'https://onur-teknik-cep-asistani-default-rtdb.europe-west1.firebasedatabase.app'};
 function safeKey(v){return 'P_'+String(v||'').replace(/[^0-9A-Za-z_-]/g,'_')}
@@ -133,6 +180,7 @@ function showTab(id,el){
  $(id).classList.remove('hidden');
  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active')); el.classList.add('active');
  if(id==='liste') render();
+ if(id==='fiyat'){ if(cloudReady) pullCloudCatalog(true).then(()=>renderLookup([])); else renderLookup([]); }
 }
 async function compressPhoto(file,maxSide=900,quality=.76){return await new Promise((resolve,reject)=>{let r=new FileReader();r.onerror=reject;r.onload=()=>{let im=new Image();im.onerror=()=>resolve(String(r.result||''));im.onload=()=>{let w=im.naturalWidth||im.width,h=im.naturalHeight||im.height,s=Math.min(1,maxSide/Math.max(w,h)),c=document.createElement('canvas');c.width=Math.max(1,Math.round(w*s));c.height=Math.max(1,Math.round(h*s));c.getContext('2d').drawImage(im,0,0,c.width,c.height);try{resolve(c.toDataURL('image/jpeg',quality))}catch(e){resolve(String(r.result||''))}};im.src=r.result};r.readAsDataURL(file)})}
 $('photo').addEventListener('change',async e=>{const f=e.target.files&&e.target.files[0];if(!f)return;photoData=await compressPhoto(f);$('preview').src=photoData;$('preview').style.display='block'});
@@ -173,13 +221,59 @@ function eanCheck(base){let s=0;for(let i=0;i<base.length;i++)s+=Number(base[i])
 function localGeneratedBarcode(){let core='2909'+String(Date.now()).slice(-7)+String(Math.floor(Math.random()*10));return core+eanCheck(core)}
 async function generateUniqueBarcode(){for(let i=0;i<5;i++){let b=localGeneratedBarcode();if(!cloudReady)return b;try{let exists=await cloudFetch(cloudDbUrl('catalogV1/items/'+safeKey(b)));if(!exists)return b}catch(e){return b}}return localGeneratedBarcode()}
 function pricePayload(type,price){let v=Number(String(price||'0').replace(',','.'))||0,r={firmPrice:0,retailPrice:0,servicePrice:0};if(type==='Firma')r.firmPrice=v;else if(type==='Perakende')r.retailPrice=v;else r.servicePrice=v;return r}
-async function pushCatalogItem(x){if(!cloudReady||!cloudIdToken)return false;let prices=pricePayload(x.priceType,x.price),payload={barcode:x.barcode,name:x.name||'',brand:x.model||'',model:x.model||'',photo:x.photo||'',...prices,updatedAt:new Date().toISOString(),source:'Parça Barkod Saha',sourceUser:'Saha'};await cloudFetch(cloudDbUrl('catalogV1/items/'+safeKey(x.barcode)),{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});return true}
+async function pushCatalogItem(x){if(!cloudReady||!cloudIdToken)return false;let prices=pricePayload(x.priceType,x.price),initialWarehouse=(x.action==='Stoka eklendi'?Math.max(0,Number(x.qty||0)):undefined),payload={barcode:x.barcode,name:x.name||'',brand:x.model||'',model:x.model||'',photo:x.photo||'',...prices,warehouse:initialWarehouse,updatedAt:new Date().toISOString(),source:'Parça Barkod Saha',sourceUser:'Saha'};await cloudFetch(cloudDbUrl('catalogV1/items/'+safeKey(x.barcode)),{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});return true}
 async function connectCloud(){let email=($('cloudEmail').value||localStorage.getItem('ot_pb_cloud_email')||'').trim(),pass=$('cloudPass').value||'';if(!email||!pass){cloudMsg('E-posta ve şifre gerekli.','cloudBad');return false}localStorage.setItem('ot_pb_cloud_email',email);cloudMsg('Buluta bağlanılıyor...');try{await cloudLogin(email,pass);cloudReady=true;$('cloudPass').value='';cloudMsg('● Bulut bağlı · kayıtlar PC ile ortak','cloudOk');await pullCloudCatalog(true);await syncLocalToCloud(true);return true}catch(e){cloudReady=false;cloudMsg('Bağlantı kurulamadı: '+String(e.message||e),'cloudBad');return false}}
 async function autoCloud(){try{if(await cloudRefresh()){cloudMsg('● Bulut otomatik bağlı · PC ile ortak','cloudOk');await pullCloudCatalog(true);await syncLocalToCloud(true);return true}}catch(e){}cloudReady=false;cloudMsg('İlk bağlantı için Buluta Bağlan ile giriş yapın.','cloudWarn');return false}
 async function pullCloudCatalog(silent){if(!cloudReady)return false;try{let cat=await cloudFetch(cloudDbUrl('catalogV1/items'))||{},stock=await cloudFetch(cloudDbUrl('stock'))||{},cache={};for(const x of Object.values(stock)){if(x&&x.barcode)cache[String(x.barcode)]={barcode:String(x.barcode),name:x.name||'',model:x.brand||'',photo:x.photo||'',firmPrice:Number(x.firmPrice||0),retailPrice:Number(x.retailPrice||0),servicePrice:Number(x.servicePrice||0),warehouse:Number(x.warehouse||0),vehicle:Number(x.vehicle||0)}}for(const x of Object.values(cat)){if(!x||!x.barcode)continue;let b=String(x.barcode),z=cache[b]||{};cache[b]={...z,barcode:b,name:x.name||z.name||'',model:x.brand||x.model||z.model||'',photo:x.photo||z.photo||'',firmPrice:Number(x.firmPrice||z.firmPrice||0),retailPrice:Number(x.retailPrice||z.retailPrice||0),servicePrice:Number(x.servicePrice||z.servicePrice||0)}}setCatalogCache(cache);if(!silent)cloudMsg('● Buluttan '+Object.keys(cache).length+' parça bilgisi alındı.','cloudOk');return true}catch(e){if(!silent)cloudMsg('Parçalar alınamadı: '+String(e.message||e),'cloudBad');return false}}
 function catalogRecordForBarcode(b){let cache=cloudCatalog&&Object.keys(cloudCatalog).length?cloudCatalog:getCatalogCache();return cache[String(b||'')]||null}
 function applyCatalogToForm(x){if(!x)return;if(!$('name').value)$('name').value=x.name||'';if(!$('model').value)$('model').value=x.model||'';if(!photoData&&x.photo){photoData=x.photo;$('preview').src=photoData;$('preview').style.display='block'}let pt=$('priceType').value;if(!$('price').value){let p=pt==='Firma'?x.firmPrice:pt==='Perakende'?x.retailPrice:x.servicePrice;if(Number(p)>0)$('price').value=String(p)}}
 async function afterBarcodeEntered(){let b=$('barcode').value.trim();if(!b)return;let loc=getAll().find(x=>String(x.barcode)===b);if(loc){$('name').value=loc.name||$('name').value;$('model').value=loc.model||$('model').value;if(loc.photo&&!photoData){photoData=loc.photo;$('preview').src=photoData;$('preview').style.display='block'}}let c=catalogRecordForBarcode(b);if(c)applyCatalogToForm(c);else if(cloudReady){await pullCloudCatalog(true);c=catalogRecordForBarcode(b);if(c)applyCatalogToForm(c)}}
+
+function normText(v){return String(v||'').toLocaleLowerCase('tr-TR').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/ı/g,'i').replace(/[^a-z0-9ğüşöçİi]+/gi,' ').trim()}
+function moneyTR(v){let n=Number(v||0);return n>0?n.toLocaleString('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:2})+' TL':'—'}
+function allLookupItems(){
+ let map=new Map(),cache=cloudCatalog&&Object.keys(cloudCatalog).length?cloudCatalog:getCatalogCache();
+ Object.values(cache||{}).forEach(x=>{if(x&&x.barcode)map.set(String(x.barcode),{...x,barcode:String(x.barcode)})});
+ getAll().forEach(x=>{let b=String(x.barcode||'');if(!b)return;let z=map.get(b)||{barcode:b};let pp=pricePayload(x.priceType,x.price);map.set(b,{...z,barcode:b,name:z.name||x.name||'',model:z.model||x.model||'',photo:z.photo||x.photo||'',firmPrice:Number(z.firmPrice||pp.firmPrice||0),retailPrice:Number(z.retailPrice||pp.retailPrice||0),servicePrice:Number(z.servicePrice||pp.servicePrice||0)})});
+ return [...map.values()];
+}
+function scoreLookupItem(x,q){
+ let nq=normText(q),b=String(x.barcode||''),n=normText(x.name),m=normText(x.model),all=normText([b,x.name,x.model].join(' '));
+ if(!nq)return 0;if(b===String(q).trim())return 100;if(normText(b)===nq)return 98;if(n===nq)return 95;if(n.startsWith(nq))return 85;if(m===nq)return 82;if(all.includes(nq))return 70;
+ let parts=nq.split(/\s+/).filter(Boolean),hit=parts.filter(t=>all.includes(t)).length;return parts.length?Math.round(60*hit/parts.length):0;
+}
+function lookupText(){
+ let q=($('lookupQuery').value||'').trim();if(!q){$('lookupMsg').textContent='Arama için parça adı, marka, ürün kodu veya barkod yazın.';renderLookup([]);return}
+ let arr=allLookupItems().map(x=>({...x,_score:scoreLookupItem(x,q)})).filter(x=>x._score>0).sort((a,b)=>b._score-a._score).slice(0,20);
+ $('lookupMsg').textContent=arr.length?arr.length+' eşleşme bulundu.':'Kayıt bulunamadı. PC’den güncel fiyatları alıp tekrar deneyin.';renderLookup(arr,'text');
+}
+async function refreshLookupCatalog(){
+ if(!cloudReady){$('lookupMsg').textContent='Bulut bağlı değil. YEDEK bölümünden buluta bağlanın.';return}
+ $('lookupMsg').textContent='PC fiyatları ve stokları alınıyor...';let ok=await pullCloudCatalog(true);$('lookupMsg').textContent=ok?'PC fiyatları ve stokları güncellendi.':'Güncel bilgiler alınamadı.';if(($('lookupQuery').value||'').trim())lookupText();
+}
+function resultCard(x,similarity){
+ let pic=x.photo?`<img src="${x.photo}" onclick="window.open(this.src,'_blank')">`:'';
+ let sim=similarity!=null?`<span class="similarity">Yakınlık: %${Math.max(0,Math.min(100,Math.round(similarity*100)))}</span>`:'';
+ return `<div class="lookupResult">${pic}<div class="lookupName">${esc(x.name||'İsimsiz parça')}</div><div class="lookupCode">Barkod / Kod: ${esc(x.barcode||'—')} ${x.model?' · '+esc(x.model):''}</div>${sim}<div class="priceLine"><span class="pricePill">Perakende: <strong>${moneyTR(x.retailPrice)}</strong></span><span class="pricePill">Firma: <strong>${moneyTR(x.firmPrice)}</strong></span><span class="pricePill">Saha: <strong>${moneyTR(x.servicePrice)}</strong></span></div><div class="stockLine">Depo: <b>${Number(x.warehouse||0)}</b> · Araç: <b>${Number(x.vehicle||0)}</b></div><div style="clear:both"></div></div>`;
+}
+function renderLookup(arr=[],mode=''){let el=$('lookupResults');if(!el)return;if(!arr.length){el.innerHTML='<div class="msg">Sonuç yok.</div>';$('lookupSummary').textContent=mode==='photo'?'Fotoğrafa yakın kayıt bulunamadı. Barkod veya isimle aramayı deneyin.':'İsim, barkod, ürün kodu, marka veya fotoğraf ile arama yapabilirsiniz.';return}el.innerHTML=arr.map(x=>resultCard(x,x._similarity)).join('');$('lookupSummary').textContent=(mode==='photo'?'Fotoğrafa en yakın ':'Bulunan ')+arr.length+' kayıt gösteriliyor.'}
+async function startLookupScanner(){
+ stopLookupScanner();if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){$('lookupScanMsg').textContent='Kamera desteklenmiyor. Barkod fotoğrafı seçebilirsiniz.';return}
+ try{lookupStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}}});$('lookupVideo').srcObject=lookupStream;await $('lookupVideo').play();$('lookupVideoWrap').style.display='block';if('BarcodeDetector' in window){let fm=['code_128','ean_13','ean_8','upc_a','upc_e','qr_code','data_matrix'];try{lookupDetector=new BarcodeDetector({formats:fm})}catch(e){lookupDetector=new BarcodeDetector()}$('lookupScanMsg').textContent='Barkodu kameraya tutun.';lookupScanLoop()}else{$('lookupScanMsg').textContent='Bu tarayıcı canlı otomatik okumayı desteklemiyor. Barkod fotoğrafı seçin.'}}catch(e){$('lookupScanMsg').textContent='Kamera açılamadı. Kamera iznini kontrol edin.'}
+}
+async function lookupScanLoop(){if(!lookupDetector||!lookupStream)return;try{let codes=await lookupDetector.detect($('lookupVideo'));if(codes&&codes.length){let b=codes[0].rawValue||'';$('lookupQuery').value=b;$('lookupScanMsg').textContent='Barkod okundu: '+b;stopLookupScanner();lookupText();return}}catch(e){}lookupTimer=setTimeout(lookupScanLoop,350)}
+function stopLookupScanner(){if(lookupTimer){clearTimeout(lookupTimer);lookupTimer=null}if(lookupStream){lookupStream.getTracks().forEach(t=>t.stop());lookupStream=null}if($('lookupVideoWrap'))$('lookupVideoWrap').style.display='none'}
+async function decodeBarcodePhoto(file){
+ $('lookupScanMsg').textContent='Barkod fotoğrafı okunuyor...';
+ try{if('BarcodeDetector' in window&&window.createImageBitmap){let bm=await createImageBitmap(file),d;try{d=new BarcodeDetector({formats:['code_128','ean_13','ean_8','upc_a','upc_e','qr_code','data_matrix']})}catch(e){d=new BarcodeDetector()}let r=await d.detect(bm);if(r&&r.length)return r[0].rawValue||''}}catch(e){}
+ if(window.Quagga){let url=URL.createObjectURL(file);try{return await new Promise(resolve=>{Quagga.decodeSingle({src:url,numOfWorkers:0,locate:true,inputStream:{size:1200},decoder:{readers:['ean_reader','ean_8_reader','code_128_reader','upc_reader','upc_e_reader','code_39_reader','codabar_reader','i2of5_reader']}},res=>resolve(res&&res.codeResult&&res.codeResult.code?String(res.codeResult.code):''))})}finally{URL.revokeObjectURL(url)}}
+ return '';
+}
+async function sourceToCanvas(source,w=8,h=8){return await new Promise((resolve,reject)=>{let im=new Image();im.onload=()=>{let c=document.createElement('canvas');c.width=w;c.height=h;let ctx=c.getContext('2d',{willReadFrequently:true});ctx.drawImage(im,0,0,w,h);resolve(ctx.getImageData(0,0,w,h).data)};im.onerror=reject;if(source instanceof File){let r=new FileReader();r.onload=()=>im.src=r.result;r.onerror=reject;r.readAsDataURL(source)}else im.src=source})}
+async function imageSig(source){let key=typeof source==='string'?source.slice(0,120):'';if(key&&photoSigCache.has(key))return photoSigCache.get(key);let d=await sourceToCanvas(source,8,8),gray=[],rs=0,gs=0,bs=0;for(let i=0;i<d.length;i+=4){let r=d[i],g=d[i+1],b=d[i+2];gray.push(.299*r+.587*g+.114*b);rs+=r;gs+=g;bs+=b}let avg=gray.reduce((a,b)=>a+b,0)/gray.length,bits=gray.map(v=>v>=avg?1:0).join(''),sig={bits,r:rs/64,g:gs/64,b:bs/64};if(key)photoSigCache.set(key,sig);return sig}
+function sigSim(a,b){let h=0;for(let i=0;i<64;i++)if(a.bits[i]!==b.bits[i])h++;let hs=1-h/64,cd=Math.sqrt((a.r-b.r)**2+(a.g-b.g)**2+(a.b-b.b)**2),cs=Math.max(0,1-cd/441.7);return .82*hs+.18*cs}
+async function searchByPhoto(){let f=$('partSearchPhoto').files&&$('partSearchPhoto').files[0];if(!f){$('lookupSummary').textContent='Önce parçanın fotoğrafını çekin veya seçin.';return}let items=allLookupItems().filter(x=>x.photo);if(!items.length){$('lookupSummary').textContent='Katalogda karşılaştırılacak ürün fotoğrafı yok.';return}$('lookupSummary').textContent='Fotoğraflar karşılaştırılıyor...';try{let q=await imageSig(f),sc=[];for(const x of items){try{let s=await imageSig(x.photo);sc.push({...x,_similarity:sigSim(q,s)})}catch(e){}}sc.sort((a,b)=>b._similarity-a._similarity);let top=sc.slice(0,8);renderLookup(top,'photo')}catch(e){$('lookupSummary').textContent='Fotoğraf karşılaştırılamadı. Barkod veya isimle aramayı deneyin.'}}
+
 async function saveItem(){
  let n=$('name').value.trim(),b=$('barcode').value.trim();if(!n&&!b){alert('Parça adı veya barkod girin.');return}
  if(!b){b=await generateUniqueBarcode();$('barcode').value=b;$('scanMsg').textContent='Barkodu olmayan ürün için yeni barkod oluşturuldu: '+b}
@@ -209,6 +303,10 @@ function importBackup(){
  const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);const items=Array.isArray(d)?d:d.items;if(!Array.isArray(items))throw 0;setAll(items);alert('Yedek geri yüklendi.');render()}catch(e){alert('Geçerli bir yedek dosyası değil.')}};r.readAsText(f);
 }
 function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+
+if($('barcodePhoto'))$('barcodePhoto').addEventListener('change',async e=>{let f=e.target.files&&e.target.files[0];if(!f)return;let b=await decodeBarcodePhoto(f);if(b){$('lookupQuery').value=b;$('lookupScanMsg').textContent='Barkod fotoğraftan okundu: '+b;lookupText()}else $('lookupScanMsg').textContent='Barkod fotoğraftan okunamadı. Daha net/yakın çekin veya kodu elle yazın.'});
+if($('partSearchPhoto'))$('partSearchPhoto').addEventListener('change',async e=>{let f=e.target.files&&e.target.files[0];if(!f)return;lookupPhotoData=await compressPhoto(f,900,.78);$('lookupPhotoPreview').src=lookupPhotoData;$('lookupPhotoPreview').style.display='block'});
+
 $('barcode').addEventListener('change',afterBarcodeEntered);$('barcode').addEventListener('blur',afterBarcodeEntered);$('barcode').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();afterBarcodeEntered()}});$('priceType').addEventListener('change',()=>{let c=catalogRecordForBarcode($('barcode').value.trim());if(c){$('price').value='';applyCatalogToForm(c)}});
 if($('cloudEmail'))$('cloudEmail').value=localStorage.getItem('ot_pb_cloud_email')||'';
 cloudCatalog=getCatalogCache();
