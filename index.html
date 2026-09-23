@@ -177,7 +177,7 @@ Bu ürüne üç fiyatı da aynı anda yazın. Personel fiyat ararken yalnız <b>
 <div class="card">
 <h2>Bulut Senkronu</h2>
 <div class="msg">Bu saha uygulaması PC'deki Onur Teknik Barkod / Stok sistemiyle aynı bulutu kullanır. İlk bağlantıda yönetici hesabıyla bir kez giriş yapın; sonra güvenli oturum anahtarıyla otomatik bağlanır.</div>
-<label>Firebase e-posta</label><input id="cloudEmail" type="email" placeholder="Bulut giriş e-postası">
+<label>Firebase e-posta</label><input id="cloudEmail" type="email" value="onurteknikbulut@gmail.com" placeholder="Bulut giriş e-postası">
 <label>Şifre</label><input id="cloudPass" type="password" placeholder="İlk bağlantıda gerekli">
 <div id="cloudStatus" class="cloudStatus cloudWarn">Bulut bağlantısı bekleniyor.</div>
 <div class="row"><button class="btn green" onclick="connectCloud()">BULUTA BAĞLAN</button><button class="btn orange" onclick="syncLocalToCloud()">ŞİMDİ SENKRONLA</button></div>
@@ -202,7 +202,7 @@ Bu ürüne üç fiyatı da aynı anda yazın. Personel fiyat ararken yalnız <b>
 </div>
 </div>
 </main>
-<footer>TEST 5.8 • Otomatik Bulut Düzeltme • Ortak Parça Kataloğu • PC+Telefon aynı liste • Kalıcı silme filtresi • Üç fiyat • Fiyat sepeti</footer>
+<footer>TEST 5.9 • Sabit Mail + Otomatik Bulut • Ortak Parça Kataloğu • PC+Telefon aynı liste • Kalıcı silme filtresi • Üç fiyat • Fiyat sepeti</footer>
 
 <script src="https://cdn.jsdelivr.net/npm/@ericblade/quagga2@1.8.4/dist/quagga.min.js"></script>
 <script>
@@ -648,7 +648,7 @@ if($('barcodePhoto'))$('barcodePhoto').addEventListener('change',async e=>{let f
 if($('partSearchPhoto'))$('partSearchPhoto').addEventListener('change',async e=>{let f=e.target.files&&e.target.files[0];if(!f)return;lookupPhotoData=await compressPhoto(f,900,.78);$('lookupPhotoPreview').src=lookupPhotoData;$('lookupPhotoPreview').style.display='block'});
 
 $('barcode').addEventListener('change',afterBarcodeEntered);$('barcode').addEventListener('blur',afterBarcodeEntered);$('barcode').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();afterBarcodeEntered()}});if($('priceType'))$('priceType').addEventListener('change',()=>{let c=catalogRecordForBarcode($('barcode').value.trim());if(c&&$('price')){$('price').value='';applyCatalogToForm(c)}});
-if($('cloudEmail'))$('cloudEmail').value=localStorage.getItem('ot_pb_cloud_email')||'';
+if($('cloudEmail')){const defaultCloudEmail='onurteknikbulut@gmail.com';const savedCloudEmail=localStorage.getItem('ot_pb_cloud_email')||defaultCloudEmail;$('cloudEmail').value=savedCloudEmail;localStorage.setItem('ot_pb_cloud_email',savedCloudEmail);}
 cloudCatalog=getCatalogCache();
 window.addEventListener('online',()=>autoCloud());document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!cloudReady)autoCloud()});setInterval(()=>{if(cloudReady){pullCloudCatalog(true);syncLocalToCloud(true)}else autoCloud()},5*60*1000);
 if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>{});
