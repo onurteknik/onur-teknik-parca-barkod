@@ -202,7 +202,7 @@ Bu ürüne üç fiyatı da aynı anda yazın. Personel fiyat ararken yalnız <b>
 </div>
 </div>
 </main>
-<footer>TEST 5.6 • Ortak Parça Kataloğu • PC+Telefon aynı liste • Kalıcı silme filtresi • Üç fiyat • Fiyat sepeti</footer>
+<footer>TEST 5.7 • Otomatik Bulut Bağlantısı • Ortak Parça Kataloğu • PC+Telefon aynı liste • Kalıcı silme filtresi • Üç fiyat • Fiyat sepeti</footer>
 
 <script src="https://cdn.jsdelivr.net/npm/@ericblade/quagga2@1.8.4/dist/quagga.min.js"></script>
 <script>
@@ -220,6 +220,32 @@ function cloudMsg(msg,cls='cloudWarn'){if($('cloudStatus')){$('cloudStatus').cla
 async function cloudFetch(url,opt={},ms=15000){let c=new AbortController(),to=setTimeout(()=>c.abort(),ms);try{let r=await fetch(url,{...opt,signal:c.signal});let tx=await r.text(),d=null;try{d=tx?JSON.parse(tx):null}catch(_){d=tx}if(!r.ok){let m=(d&&d.error&&d.error.message)||(d&&d.error)||('HTTP '+r.status);throw new Error(String(m))}return d}finally{clearTimeout(to)}}
 async function cloudLogin(email,pass){let u='https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key='+encodeURIComponent(CLOUD_CFG.apiKey),d=await cloudFetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:pass,returnSecureToken:true})});if(!d||!d.idToken)throw new Error('Oturum anahtarı alınamadı');cloudIdToken=d.idToken;cloudRefreshToken=d.refreshToken||'';if(cloudRefreshToken)localStorage.setItem('ot_pb_cloud_refresh_v3',cloudRefreshToken);return d}
 async function cloudRefresh(){let token=localStorage.getItem('ot_pb_cloud_refresh_v3')||'';if(!token)return false;let u='https://securetoken.googleapis.com/v1/token?key='+encodeURIComponent(CLOUD_CFG.apiKey),d=await cloudFetch(u,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'grant_type=refresh_token&refresh_token='+encodeURIComponent(token)});if(!d||!d.id_token)return false;cloudIdToken=d.id_token;cloudRefreshToken=d.refresh_token||token;localStorage.setItem('ot_pb_cloud_refresh_v3',cloudRefreshToken);cloudReady=true;return true}
+
+let autoCloudRetryTimer=null;
+async function ensureCloudConnection(silent=false){
+  if(cloudReady&&cloudIdToken)return true;
+  try{
+    let ok=await cloudRefresh();
+    if(ok){
+      cloudMsg('● Bulut otomatik bağlı · PC ile ortak','cloudOk');
+      await pullCloudCatalog(true);
+      await syncLocalToCloud(true);
+      return true;
+    }
+  }catch(e){}
+  cloudReady=false;
+  if(!silent)cloudMsg('Bulut bağlantısı bekleniyor · otomatik yeniden denenecek.','cloudWarn');
+  return false;
+}
+function scheduleAutoCloudRetry(){
+  if(autoCloudRetryTimer)clearInterval(autoCloudRetryTimer);
+  autoCloudRetryTimer=setInterval(async()=>{
+    if(!navigator.onLine||cloudReady)return;
+    await ensureCloudConnection(true);
+  },30000);
+}
+window.addEventListener('online',()=>ensureCloudConnection(false));
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')ensureCloudConnection(true)});
 
 
 function showTab(id,el){
@@ -299,7 +325,7 @@ async function pushCatalogItem(x){
  return true
 }
 async function connectCloud(){let email=($('cloudEmail').value||localStorage.getItem('ot_pb_cloud_email')||'').trim(),pass=$('cloudPass').value||'';if(!email||!pass){cloudMsg('E-posta ve şifre gerekli.','cloudBad');return false}localStorage.setItem('ot_pb_cloud_email',email);cloudMsg('Buluta bağlanılıyor...');try{await cloudLogin(email,pass);cloudReady=true;$('cloudPass').value='';cloudMsg('● Bulut bağlı · kayıtlar PC ile ortak','cloudOk');await pullCloudCatalog(true);await syncLocalToCloud(true);return true}catch(e){cloudReady=false;cloudMsg('Bağlantı kurulamadı: '+String(e.message||e),'cloudBad');return false}}
-async function autoCloud(){try{if(await cloudRefresh()){cloudMsg('● Bulut otomatik bağlı · PC ile ortak','cloudOk');await pullCloudCatalog(true);await syncLocalToCloud(true);return true}}catch(e){}cloudReady=false;cloudMsg('İlk bağlantı için Buluta Bağlan ile giriş yapın.','cloudWarn');return false}
+async function autoCloud(){let ok=await ensureCloudConnection(false);scheduleAutoCloudRetry();if(!ok&&!localStorage.getItem('ot_pb_cloud_refresh_v3'))cloudMsg('İlk bağlantı için bir kez Buluta Bağlan ile giriş yapın.','cloudWarn');return ok}
 async function pullCloudCatalog(silent){
  if(!cloudReady)return false;
  try{
@@ -433,7 +459,11 @@ function lookupText(source='manual'){
  if(source==='scan'&&!arr.length)missingFeedback();
 }
 async function refreshLookupCatalog(){
- if(!cloudReady){$('lookupMsg').textContent='Bulut bağlı değil. YEDEK bölümünden buluta bağlanın.';return}
+ if(!cloudReady){
+   $('lookupMsg').textContent='Buluta otomatik bağlanılıyor...';
+   let connected=await ensureCloudConnection(false);
+   if(!connected){$('lookupMsg').textContent='Bulut bağlantısı kurulamadı. İnterneti kontrol edin; ilk kullanım ise YEDEK / SENKRON bölümünden bir kez giriş yapın.';return}
+ }
  $('lookupMsg').textContent='PC fiyatları ve stokları alınıyor...';let ok=await pullCloudCatalog(true);$('lookupMsg').textContent=ok?'PC fiyatları ve stokları güncellendi.':'Güncel bilgiler alınamadı.';if(($('lookupQuery').value||'').trim())lookupText();
 }
 function renderTopResult(x){
