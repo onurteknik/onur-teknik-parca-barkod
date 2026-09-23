@@ -1,0 +1,658 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#ec7814">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Onur Teknik Parça Barkod</title>
+<style>
+:root{--bg:#15181c;--panel:#20242a;--line:#343b44;--accent:#ec7814;--text:#f7f7f7;--muted:#aeb6bf;--ok:#2c7047;--warn:#76541d}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif}
+header{padding:14px 14px 12px;border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(21,24,28,.97);z-index:10}
+.brand{display:flex;align-items:center;gap:11px}.brand img{width:52px;height:52px;border-radius:12px}
+.brand b{font-size:17px}.brand small{display:block;color:var(--muted);margin-top:2px}
+main{padding:12px;max-width:760px;margin:auto}.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:13px;margin-bottom:12px}
+h2{font-size:16px;margin:0 0 10px}.tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-bottom:12px}
+.tab{padding:10px 6px;border-radius:11px;background:#2b3037;text-align:center;font-size:12px;font-weight:700;border:1px solid #3b424b}
+.tab.active{background:var(--accent);color:#101010}
+label{display:block;color:var(--muted);font-size:12px;margin:9px 0 5px}
+input,select,textarea{width:100%;background:#111419;color:#fff;border:1px solid #49515b;border-radius:11px;padding:12px;font-size:16px}
+textarea{min-height:80px;resize:vertical}.row{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.btn{border:0;border-radius:11px;padding:12px;font-weight:700;font-size:14px;width:100%;margin-top:9px}
+.orange{background:var(--accent);color:#111}.dark{background:#303740;color:#fff}.green{background:var(--ok);color:#fff}.red{background:#6c3030;color:#fff}
+#videoWrap{display:none;margin-top:9px;position:relative}.video{width:100%;border-radius:12px;background:#000;max-height:210px;object-fit:cover}
+.scanline{position:absolute;left:12%;right:12%;top:50%;height:2px;background:var(--accent);box-shadow:0 0 10px var(--accent)}
+.msg{padding:10px;border-radius:10px;background:#292f36;color:#dfe6ed;font-size:12px;margin-top:8px}
+.preview{display:none;width:100%;max-height:280px;object-fit:contain;border-radius:11px;border:1px solid var(--line);margin-top:8px;background:#111}
+.item{border:1px solid var(--line);border-radius:12px;padding:10px;margin-top:8px;overflow:hidden}.item img{width:72px;height:72px;object-fit:cover;border-radius:8px;float:right;margin-left:8px}
+.item b{display:block}.item small{color:var(--muted)}.badge{display:inline-block;background:#2e343c;border-radius:999px;padding:4px 8px;font-size:11px;margin:5px 4px 0 0}
+.search{margin-bottom:8px}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.stat{background:#181c21;border:1px solid var(--line);padding:9px;border-radius:11px;text-align:center}.stat b{font-size:17px;display:block}.stat small{color:var(--muted)}
+.hidden{display:none}footer{text-align:center;color:#7f8994;font-size:11px;padding:8px 14px 24px}
+@media(max-width:520px){.row{grid-template-columns:1fr}.tabs{grid-template-columns:1fr 1fr}.tab{min-height:44px}.lookupGrid{grid-template-columns:1fr}.video{max-height:180px}}
+
+
+.lookupGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.lookupResult{border:1px solid var(--line);border-radius:14px;padding:11px;margin-top:9px;background:#181c21}.lookupResult img{width:92px;height:92px;object-fit:contain;border-radius:10px;background:#0f1216;border:1px solid var(--line);float:right;margin-left:10px;cursor:pointer}.lookupName{font-size:16px;font-weight:800;margin-bottom:4px}.lookupCode{font-size:12px;color:var(--muted);word-break:break-all}.priceLine{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.pricePill{display:inline-block;padding:6px 8px;border-radius:9px;background:#292f36;font-size:12px}.pricePill strong{color:#ffb66e}.stockLine{font-size:12px;color:#cfd6dd;margin-top:8px}.lookupHint{font-size:11px;color:#9ba5af;line-height:1.4}.lookupPhoto{display:none;width:100%;max-height:220px;object-fit:contain;border-radius:11px;border:1px solid var(--line);margin-top:8px;background:#111}.similarity{display:inline-block;background:#263b2e;color:#9fe2b5;border-radius:999px;padding:4px 7px;font-size:11px;margin-top:6px}
+
+
+.topLookupCard{border:2px solid var(--accent);background:#171b20;padding:12px;position:relative}
+.topLookupTitle{font-size:11px;font-weight:800;letter-spacing:.7px;color:#ffbd7b;margin-bottom:8px}
+.topProduct{min-height:118px;display:grid;grid-template-columns:104px 1fr;gap:12px;align-items:center}
+.topProduct img{width:104px;height:104px;object-fit:contain;border-radius:12px;background:#0f1216;border:1px solid var(--line)}
+.topProduct .noPhoto{width:104px;height:104px;border-radius:12px;background:#0f1216;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;color:#7f8994;font-size:11px;text-align:center;padding:8px}
+.topProductName{font-size:18px;font-weight:900;line-height:1.15;margin-bottom:5px}
+.servicePrice{font-size:28px;font-weight:900;color:#ffb66e;line-height:1.05;margin:7px 0}
+.servicePrice small{display:block;font-size:11px;color:#aeb6bf;font-weight:700;margin-bottom:3px}
+.stockBoxes{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:8px}.stockBox{background:#232930;border:1px solid #3a424c;border-radius:10px;padding:7px;text-align:center;font-size:12px}.stockBox b{display:block;font-size:18px;margin-top:2px}
+.lookupTopEmpty{color:#c4ccd4;font-size:13px;line-height:1.45;padding:6px 2px}
+.resultAction{display:flex;gap:7px;clear:both;margin-top:9px}.resultAction .btn{margin-top:0;padding:9px}
+.cartRow{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;border-top:1px solid var(--line);padding:9px 0}.cartRow:first-child{border-top:0}.cartName{font-weight:800;font-size:13px}.cartMeta{font-size:11px;color:var(--muted);margin-top:3px}.cartPrice{font-weight:900;color:#ffb66e;white-space:nowrap}.cartTotal{display:flex;justify-content:space-between;align-items:center;border-top:2px solid #454d56;margin-top:6px;padding-top:10px;font-size:15px}.cartTotal b{font-size:22px;color:#ffb66e}.miniBtn{border:0;border-radius:8px;background:#573131;color:#fff;padding:7px 9px;font-weight:800;font-size:11px;margin-top:6px}.lookupResult .onlyPrice{font-size:16px;font-weight:900;color:#ffb66e;margin-top:7px}
+@media(max-width:420px){.topProduct{grid-template-columns:88px 1fr}.topProduct img,.topProduct .noPhoto{width:88px;height:88px}.servicePrice{font-size:24px}}
+
+.adminDock{margin-top:18px}.adminDock .tabs{margin:8px 0 0}.backPrice{margin:0 0 10px}.scannerCard{border-color:#4b3a27}.scannerCard h2{display:flex;align-items:center;justify-content:space-between}.scannerCard h2:after{content:'HIZLI';font-size:10px;color:#ffbd7b;letter-spacing:.7px}
+.cloudStatus{padding:10px;border-radius:10px;background:#20262d;border:1px solid var(--line);font-size:12px;margin:8px 0}.cloudOk{color:#7ee2a8}.cloudWarn{color:#ffd37a}.cloudBad{color:#ff8d8d}.syncBadge{background:#163e2c;color:#91efb8}.pendingBadge{background:#49391f;color:#ffd37a}
+
+</style>
+</head>
+<body>
+<header><div class="brand"><img src="icon-192.png"><div><b>ONUR TEKNİK • PARÇA / BARKOD</b><small>Android + iPhone ortak saha uygulaması</small></div></div></header>
+<main>
+<section id="kayit" class="hidden">
+<button class="btn orange backPrice" onclick="showTab('fiyat')">← FİYAT / PARÇA BUL'A DÖN</button>
+<div class="card">
+<h2>Barkod / QR Oku</h2>
+<div class="row">
+<button class="btn orange" onclick="startScanner()">KAMERAYI AÇ</button>
+<button class="btn dark" onclick="stopScanner()">KAMERAYI KAPAT</button>
+</div>
+<div id="videoWrap"><video id="video" class="video" playsinline muted></video><div class="scanline"></div></div>
+<div id="scanMsg" class="msg">Telefon destekliyorsa kamera barkodu otomatik okuyacaktır. Okumazsa barkodu elle yazabilirsiniz.</div>
+<label>Barkod</label><input id="barcode" placeholder="Barkodu okut veya elle yaz">
+</div>
+
+<div class="card">
+<h2>Yönetim Parça Ekleme</h2>
+<label>Parça fotoğrafı</label>
+<input id="photo" type="file" accept="image/*" capture="environment">
+<img id="preview" class="preview" alt="Parça fotoğrafı">
+<div class="row">
+<div><label>Parça adı</label><input id="name" placeholder="Örn. Üç yollu vana motoru"></div>
+<div><label>Marka / model</label><input id="model" placeholder="Örn. Vaillant"></div>
+</div>
+<div class="msg" style="border:1px solid #f47b16">
+<b>Yönetim fiyatları</b><br>
+Bu ürüne üç fiyatı da aynı anda yazın. Personel fiyat ararken yalnız <b>Servis Fiyatı</b>nı görür.
+</div>
+<div class="row">
+<div><label>Firma Fiyatı (TL)</label><input id="firmPrice" inputmode="decimal" placeholder="0,00"></div>
+<div><label>Perakende Fiyatı (TL)</label><input id="retailPrice" inputmode="decimal" placeholder="0,00"></div>
+</div>
+<div>
+<label>Servis Fiyatı (TL)</label>
+<input id="servicePrice" inputmode="decimal" placeholder="0,00">
+</div>
+<div class="row">
+<div><label>İşlem</label><select id="action"><option>Stok bilgisi</option><option>Stoka eklendi</option><option>Stoktan çıktı</option><option>Müşteride kullanıldı</option><option>Emanet verildi</option><option>Emanet geri geldi</option></select></div>
+<div><label>Adet</label><input id="qty" inputmode="numeric" value="1"></div>
+</div>
+<label>Müşteri / Firma (isteğe bağlı)</label><input id="customer" placeholder="Örn. Ahmet Yılmaz">
+<label>Not</label><textarea id="note" placeholder="Parça hakkında kısa not"></textarea>
+<button class="btn green" onclick="saveItem()">KAYDET</button>
+<button class="btn dark" onclick="clearForm()">FORMU TEMİZLE</button>
+</div>
+</section>
+
+<section id="fiyat">
+<div class="card topLookupCard" id="lookupTopCard">
+<div class="topLookupTitle">BULUNAN PARÇA • SONUÇ BURADA GÖRÜNÜR</div>
+<div id="lookupTopResult" class="lookupTopEmpty">Barkodu okutun veya aşağıdaki kutuya parça adını / kodunu yazın. Bulunan parçanın resmi, servis fiyatı ve araç-depo stoku burada görünecek.</div>
+</div>
+
+<div class="card scannerCard" id="scannerCard">
+<h2>Barkoddan Hızlı Bul</h2>
+<button class="btn orange" onclick="startLookupScanner()">BARKODU KAMERADAN OKUT</button>
+<div id="lookupVideoWrap" style="display:none;margin-top:9px;position:relative"><video id="lookupVideo" class="video" playsinline muted></video><div class="scanline"></div></div>
+<div id="lookupScanMsg" class="msg">Barkod okununca market tipi kısa “diit” barkod sesi + hafif titreşim gelir. Sonuç hemen yukarıdaki kartta görünür.</div>
+<button class="btn dark" onclick="stopLookupScanner()">KAMERAYI KAPAT</button>
+<label>Barkod fotoğrafı / ekran görüntüsü</label>
+<input id="barcodePhoto" type="file" accept="image/*" capture="environment">
+</div>
+
+<div class="card">
+<h2>İsim / Kod ile Fiyat Bul</h2>
+<label>Parça adı / ürün kodu / barkod / marka</label>
+<input id="lookupQuery" placeholder="Örn. Vaillant musluk, Airfel plaka eşanjör, Totaline, 869000..." oninput="queueLookup()" onkeydown="if(event.key==='Enter'){event.preventDefault();lookupText()}">
+<div class="row">
+<button class="btn orange" onclick="lookupText()">PARÇAYI / FİYATI BUL</button>
+<button class="btn dark" onclick="refreshLookupCatalog()">PC'DEN GÜNCEL BİLGİ AL</button>
+</div>
+<div id="lookupMsg" class="msg">İsim yazarken sistem otomatik arar. Barkod veya ürün kodunda tam eşleşme önceliklidir.</div>
+</div>
+
+<div class="card">
+<h2>Fiyat Sepeti</h2>
+<div class="msg">Müşteri kabul etmeden stok düşmez. Gerekli parçaları tek tek sepete ekleyip toplam teklifi görebilirsiniz.</div>
+<div id="quoteCart"></div>
+<button class="btn dark" onclick="clearQuoteCart()">SEPETİ TEMİZLE</button>
+</div>
+
+<div class="card">
+<h2>Parça Fotoğrafıyla Ara</h2>
+<div class="msg">Parçanın fotoğrafını kayıtlı ürün fotoğraflarıyla karşılaştırır. Bu yardımcı eşleştirmedir; barkod kadar kesin değildir.</div>
+<input id="partSearchPhoto" type="file" accept="image/*" capture="environment">
+<img id="lookupPhotoPreview" class="lookupPhoto" alt="Aranan parça fotoğrafı">
+<button class="btn orange" onclick="searchByPhoto()">FOTOĞRAFLA BENZER PARÇAYI BUL</button>
+</div>
+
+<div class="card">
+<h2>Diğer Eşleşmeler</h2>
+<div id="lookupSummary" class="lookupHint">Henüz arama yapılmadı.</div>
+<div id="lookupResults"></div>
+</div>
+</section>
+
+<section id="liste" class="hidden">
+<button class="btn orange backPrice" onclick="showTab('fiyat')">← FİYAT / PARÇA BUL'A DÖN</button>
+<div class="card">
+<h2>Ortak Parça Kataloğu</h2>
+<div class="msg">PC'de ve telefonda kayıtlı ortak ürünler burada birlikte görünür. Silme yetkisi PC yöneticisindedir.</div>
+<input id="search" class="search" placeholder="Parça adı, barkod veya marka ara" oninput="render()">
+<div class="stats">
+<div class="stat"><b id="sCount">0</b><small>Toplam Parça</small></div>
+<div class="stat"><b id="sEmanet">0</b><small>Araçta Adet</small></div>
+<div class="stat"><b id="sUsed">0</b><small>Depoda Adet</small></div>
+</div>
+<div id="list"></div>
+</div>
+<div class="card">
+<h2>Telefon İşlem Geçmişi</h2>
+<div class="msg">Telefondan yapılan stok, emanet ve kullanım işlemleri burada geçmiş olarak tutulur.</div>
+<div id="localHistoryList"></div>
+</div>
+</section>
+
+<section id="yedek" class="hidden">
+<button class="btn orange backPrice" onclick="showTab('fiyat')">← FİYAT / PARÇA BUL'A DÖN</button>
+<div class="card">
+<h2>Bulut Senkronu</h2>
+<div class="msg">Bu saha uygulaması PC'deki Onur Teknik Barkod / Stok sistemiyle aynı bulutu kullanır. İlk bağlantıda yönetici hesabıyla bir kez giriş yapın; sonra güvenli oturum anahtarıyla otomatik bağlanır.</div>
+<label>Firebase e-posta</label><input id="cloudEmail" type="email" placeholder="Bulut giriş e-postası">
+<label>Şifre</label><input id="cloudPass" type="password" placeholder="İlk bağlantıda gerekli">
+<div id="cloudStatus" class="cloudStatus cloudWarn">Bulut bağlantısı bekleniyor.</div>
+<div class="row"><button class="btn green" onclick="connectCloud()">BULUTA BAĞLAN</button><button class="btn orange" onclick="syncLocalToCloud()">ŞİMDİ SENKRONLA</button></div>
+<button class="btn dark" onclick="pullCloudCatalog(false)">PC'DEKİ PARÇALARI AL</button>
+</div>
+<div class="card">
+<h2>Yedekleme / Taşıma</h2>
+<div class="msg">Bulutun yanında JSON yedek de kalır. İsterseniz kayıtları ayrıca dosya olarak dışa aktarabilirsiniz.</div>
+<button class="btn orange" onclick="exportBackup()">YEDEĞİ DIŞA AKTAR</button>
+<label>Yedeği geri yükle</label><input id="importFile" type="file" accept=".json,application/json">
+<button class="btn dark" onclick="importBackup()">YEDEĞİ GERİ YÜKLE</button>
+</div>
+</section>
+
+<div class="card adminDock">
+<button class="btn dark" onclick="toggleAdminMenu()">YÖNETİM MENÜSÜNÜ AÇ / KAPAT</button>
+<div id="adminTabs" class="tabs" style="display:none">
+<div class="tab" data-target="fiyat" onclick="showTab('fiyat',this)">FİYAT / PARÇA BUL</div>
+<div class="tab" data-target="kayit" onclick="showTab('kayit',this)">YÖNETİM PARÇA EKLE</div>
+<div class="tab" data-target="liste" onclick="showTab('liste',this)">PARÇA KAYITLARI</div>
+<div class="tab" data-target="yedek" onclick="showTab('yedek',this)">YEDEK / SENKRON</div>
+</div>
+</div>
+</main>
+<footer>TEST 5.7 • Otomatik Bulut Bağlantısı • Ortak Parça Kataloğu • PC+Telefon aynı liste • Kalıcı silme filtresi • Üç fiyat • Fiyat sepeti</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@ericblade/quagga2@1.8.4/dist/quagga.min.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+let photoData='', stream=null, detector=null, scanTimer=null;
+let lookupStream=null,lookupDetector=null,lookupTimer=null,lookupPhotoData='';
+const photoSigCache=new Map();
+let cloudReady=false, cloudIdToken='', cloudRefreshToken='', cloudCatalog={};
+let lastLookupResults=[], currentLookupItem=null, lookupTypingTimer=null;
+let quoteCart=[];try{quoteCart=JSON.parse(localStorage.getItem('ot_pb_quote_cart_v1')||'[]');if(!Array.isArray(quoteCart))quoteCart=[]}catch(e){quoteCart=[]}
+const CLOUD_CFG={workspace:'ONURTEKNIK',apiKey:'AIzaSyCq82p2fLOpssU8OO8Fg9GbD0qu2t-WaVU',databaseURL:'https://onur-teknik-cep-asistani-default-rtdb.europe-west1.firebasedatabase.app'};
+function safeKey(v){return 'P_'+String(v||'').replace(/[^0-9A-Za-z_-]/g,'_')}
+function cloudDbUrl(path){return CLOUD_CFG.databaseURL.replace(/\/$/,'')+'/workspaces/'+encodeURIComponent(CLOUD_CFG.workspace)+'/'+path+'.json?auth='+encodeURIComponent(cloudIdToken)}
+function cloudMsg(msg,cls='cloudWarn'){if($('cloudStatus')){$('cloudStatus').className='cloudStatus '+cls;$('cloudStatus').textContent=msg}}
+async function cloudFetch(url,opt={},ms=15000){let c=new AbortController(),to=setTimeout(()=>c.abort(),ms);try{let r=await fetch(url,{...opt,signal:c.signal});let tx=await r.text(),d=null;try{d=tx?JSON.parse(tx):null}catch(_){d=tx}if(!r.ok){let m=(d&&d.error&&d.error.message)||(d&&d.error)||('HTTP '+r.status);throw new Error(String(m))}return d}finally{clearTimeout(to)}}
+async function cloudLogin(email,pass){let u='https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key='+encodeURIComponent(CLOUD_CFG.apiKey),d=await cloudFetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:pass,returnSecureToken:true})});if(!d||!d.idToken)throw new Error('Oturum anahtarı alınamadı');cloudIdToken=d.idToken;cloudRefreshToken=d.refreshToken||'';if(cloudRefreshToken)localStorage.setItem('ot_pb_cloud_refresh_v3',cloudRefreshToken);return d}
+async function cloudRefresh(){let token=localStorage.getItem('ot_pb_cloud_refresh_v3')||'';if(!token)return false;let u='https://securetoken.googleapis.com/v1/token?key='+encodeURIComponent(CLOUD_CFG.apiKey),d=await cloudFetch(u,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'grant_type=refresh_token&refresh_token='+encodeURIComponent(token)});if(!d||!d.id_token)return false;cloudIdToken=d.id_token;cloudRefreshToken=d.refresh_token||token;localStorage.setItem('ot_pb_cloud_refresh_v3',cloudRefreshToken);cloudReady=true;return true}
+
+let autoCloudRetryTimer=null;
+async function ensureCloudConnection(silent=false){
+  if(cloudReady&&cloudIdToken)return true;
+  try{
+    let ok=await cloudRefresh();
+    if(ok){
+      cloudMsg('● Bulut otomatik bağlı · PC ile ortak','cloudOk');
+      await pullCloudCatalog(true);
+      await syncLocalToCloud(true);
+      return true;
+    }
+  }catch(e){}
+  cloudReady=false;
+  if(!silent)cloudMsg('Bulut bağlantısı bekleniyor · otomatik yeniden denenecek.','cloudWarn');
+  return false;
+}
+function scheduleAutoCloudRetry(){
+  if(autoCloudRetryTimer)clearInterval(autoCloudRetryTimer);
+  autoCloudRetryTimer=setInterval(async()=>{
+    if(!navigator.onLine||cloudReady)return;
+    await ensureCloudConnection(true);
+  },30000);
+}
+window.addEventListener('online',()=>ensureCloudConnection(false));
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')ensureCloudConnection(true)});
+
+
+function showTab(id,el){
+ document.querySelectorAll('main section').forEach(s=>s.classList.add('hidden'));
+ $(id).classList.remove('hidden');
+ document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+ let targetEl=el||document.querySelector('.tab[data-target="'+id+'"]'); if(targetEl)targetEl.classList.add('active');
+ if(id==='liste'){ if(cloudReady) pullCloudCatalog(true).then(()=>render()); else render(); }
+ if(id==='fiyat'){ if(cloudReady) pullCloudCatalog(true).then(()=>renderLookup([])); else renderLookup([]); window.scrollTo({top:0,behavior:'smooth'}); }
+ else window.scrollTo({top:0,behavior:'smooth'});
+}
+function toggleAdminMenu(){let x=$('adminTabs');if(!x)return;x.style.display=(x.style.display==='none'||!x.style.display)?'grid':'none'}
+async function compressPhoto(file,maxSide=900,quality=.76){return await new Promise((resolve,reject)=>{let r=new FileReader();r.onerror=reject;r.onload=()=>{let im=new Image();im.onerror=()=>resolve(String(r.result||''));im.onload=()=>{let w=im.naturalWidth||im.width,h=im.naturalHeight||im.height,s=Math.min(1,maxSide/Math.max(w,h)),c=document.createElement('canvas');c.width=Math.max(1,Math.round(w*s));c.height=Math.max(1,Math.round(h*s));c.getContext('2d').drawImage(im,0,0,c.width,c.height);try{resolve(c.toDataURL('image/jpeg',quality))}catch(e){resolve(String(r.result||''))}};im.src=r.result};r.readAsDataURL(file)})}
+$('photo').addEventListener('change',async e=>{const f=e.target.files&&e.target.files[0];if(!f)return;photoData=await compressPhoto(f);$('preview').src=photoData;$('preview').style.display='block'});
+async function startScanner(){
+ stopScanner();
+ if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){$('scanMsg').textContent='Bu telefonda tarayıcı kamera erişimini desteklemiyor. Barkodu elle yazabilirsiniz.';return}
+ try{
+   stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}}});
+   $('video').srcObject=stream; await $('video').play(); $('videoWrap').style.display='block';
+   if('BarcodeDetector' in window){
+     const formats=['code_128','ean_13','ean_8','upc_a','upc_e','qr_code','data_matrix'];
+     try{detector=new BarcodeDetector({formats})}catch(e){detector=new BarcodeDetector()}
+     $('scanMsg').textContent='Kamerayı barkoda tutun. Okunduğunda alan otomatik dolacaktır.';
+     scanLoop();
+   }else{
+     $('scanMsg').textContent='Bu tarayıcı otomatik barkod okumayı desteklemiyor. Kamerayı fotoğraf için kullanabilir, barkodu elle girebilirsiniz.';
+   }
+ }catch(e){$('scanMsg').textContent='Kamera açılamadı. Telefon ayarlarından kamera iznini kontrol edin.'}
+}
+async function scanLoop(){
+ if(!detector||!stream)return;
+ try{
+   const codes=await detector.detect($('video'));
+   if(codes&&codes.length){$('barcode').value=codes[0].rawValue||'';$('scanMsg').textContent='Barkod okundu: '+$('barcode').value;stopScanner();afterBarcodeEntered();return}
+ }catch(e){}
+ scanTimer=setTimeout(scanLoop,350);
+}
+function stopScanner(){
+ if(scanTimer){clearTimeout(scanTimer);scanTimer=null}
+ if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}
+ $('videoWrap').style.display='none';
+}
+function getAll(){try{let a=JSON.parse(localStorage.getItem('ot_parca_barkod_v3')||localStorage.getItem('ot_parca_barkod_v2')||'[]');if(!Array.isArray(a))return[];let seen=new Set(),out=[];for(const x of a){let k=String(x&&x.barcode||'').trim();if(k){if(seen.has(k))continue;seen.add(k)}out.push(x)}return out}catch(e){return[]}}
+function setAll(a){localStorage.setItem('ot_parca_barkod_v3',JSON.stringify(a))}
+let deletedCatalog={};
+function getDeletedCache(){try{return JSON.parse(localStorage.getItem('ot_pb_deleted_cache_v1')||'{}')}catch(e){return{}}}
+function setDeletedCache(v){deletedCatalog=v||{};localStorage.setItem('ot_pb_deleted_cache_v1',JSON.stringify(deletedCatalog))}
+function isDeletedBarcode(b){return !!(deletedCatalog&&deletedCatalog[String(b||'')])}
+function getCatalogCache(){try{return JSON.parse(localStorage.getItem('ot_pb_catalog_cache_v3')||'{}')}catch(e){return{}}}
+function setCatalogCache(v){cloudCatalog=v||{};localStorage.setItem('ot_pb_catalog_cache_v3',JSON.stringify(cloudCatalog))}
+function eanCheck(base){let s=0;for(let i=0;i<base.length;i++)s+=Number(base[i])*(i%2===0?1:3);return String((10-(s%10))%10)}
+function localGeneratedBarcode(){let core='2909'+String(Date.now()).slice(-7)+String(Math.floor(Math.random()*10));return core+eanCheck(core)}
+async function generateUniqueBarcode(){for(let i=0;i<5;i++){let b=localGeneratedBarcode();if(!cloudReady)return b;try{let exists=await cloudFetch(cloudDbUrl('catalogV1/items/'+safeKey(b)));if(!exists)return b}catch(e){return b}}return localGeneratedBarcode()}
+function nPrice(v){return Number(String(v??'0').replace(',','.'))||0}
+function pricePayload(type,price){let v=nPrice(price),r={firmPrice:0,retailPrice:0,servicePrice:0};if(type==='Firma')r.firmPrice=v;else if(type==='Perakende')r.retailPrice=v;else r.servicePrice=v;return r}
+function recordPrices(x){
+ if(!x)return {firmPrice:0,retailPrice:0,servicePrice:0};
+ if(x.firmPrice!==undefined||x.retailPrice!==undefined||x.servicePrice!==undefined){
+  return {firmPrice:nPrice(x.firmPrice),retailPrice:nPrice(x.retailPrice),servicePrice:nPrice(x.servicePrice)};
+ }
+ return pricePayload(x.priceType,x.price);
+}
+async function pushCatalogItem(x){
+ if(!cloudReady||!cloudIdToken)return false;
+ let prices=recordPrices(x),
+     initialWarehouse=(x.action==='Stoka eklendi'?Math.max(0,Number(x.qty||0)):undefined),
+     payload={
+       barcode:x.barcode,name:x.name||'',brand:x.model||'',model:x.model||'',photo:x.photo||'',
+       firmPrice:prices.firmPrice,retailPrice:prices.retailPrice,servicePrice:prices.servicePrice,
+       warehouse:initialWarehouse,updatedAt:new Date().toISOString(),
+       source:'Parça Barkod Saha',sourceUser:'Yönetim Mobil'
+     };
+ await cloudFetch(cloudDbUrl('catalogV1/items/'+safeKey(x.barcode)),{
+   method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)
+ });
+ return true
+}
+async function connectCloud(){let email=($('cloudEmail').value||localStorage.getItem('ot_pb_cloud_email')||'').trim(),pass=$('cloudPass').value||'';if(!email||!pass){cloudMsg('E-posta ve şifre gerekli.','cloudBad');return false}localStorage.setItem('ot_pb_cloud_email',email);cloudMsg('Buluta bağlanılıyor...');try{await cloudLogin(email,pass);cloudReady=true;$('cloudPass').value='';cloudMsg('● Bulut bağlı · kayıtlar PC ile ortak','cloudOk');await pullCloudCatalog(true);await syncLocalToCloud(true);return true}catch(e){cloudReady=false;cloudMsg('Bağlantı kurulamadı: '+String(e.message||e),'cloudBad');return false}}
+async function autoCloud(){let ok=await ensureCloudConnection(false);scheduleAutoCloudRetry();if(!ok&&!localStorage.getItem('ot_pb_cloud_refresh_v3'))cloudMsg('İlk bağlantı için bir kez Buluta Bağlan ile giriş yapın.','cloudWarn');return ok}
+async function pullCloudCatalog(silent){
+ if(!cloudReady)return false;
+ try{
+  let cat=await cloudFetch(cloudDbUrl('catalogV1/items'))||{},
+      stock=await cloudFetch(cloudDbUrl('stock'))||{},
+      tombRows=await cloudFetch(cloudDbUrl('catalogDeleted'))||{},
+      cache={},deleted={};
+
+  Object.values(tombRows||{}).forEach(x=>{
+    if(x&&x.deleted&&x.barcode)deleted[String(x.barcode)]=x;
+  });
+  setDeletedCache(deleted);
+
+  for(const x of Object.values(cat)){
+   if(!x||!x.barcode||deleted[String(x.barcode)])continue;
+   let b=String(x.barcode);
+   cache[b]={barcode:b,name:x.name||'',model:x.brand||x.model||'',photo:x.photo||'',
+     firmPrice:Number(x.firmPrice||0),retailPrice:Number(x.retailPrice||0),
+     servicePrice:Number(x.servicePrice||0),warehouse:Number(x.warehouse||0),vehicle:Number(x.vehicle||0)};
+  }
+  for(const x of Object.values(stock)){
+   if(!x||!x.barcode||deleted[String(x.barcode)])continue;
+   let b=String(x.barcode),z=cache[b]||{barcode:b};
+   cache[b]={...z,barcode:b,
+     name:x.name||z.name||'',model:x.brand||z.model||'',photo:x.photo||z.photo||'',
+     firmPrice:Number(x.firmPrice??z.firmPrice??0),
+     retailPrice:Number(x.retailPrice??z.retailPrice??0),
+     servicePrice:Number(x.servicePrice??z.servicePrice??0),
+     warehouse:Number(x.warehouse??0),vehicle:Number(x.vehicle??0)};
+  }
+  setCatalogCache(cache);
+  if(!silent)cloudMsg('● Ortak katalog: '+Object.keys(cache).length+' parça · silinenler filtrelendi.','cloudOk');
+  render();
+  return true
+ }catch(e){
+  if(!silent)cloudMsg('Parçalar alınamadı: '+String(e.message||e),'cloudBad');
+  return false
+ }
+}
+function catalogRecordForBarcode(b){let cache=cloudCatalog&&Object.keys(cloudCatalog).length?cloudCatalog:getCatalogCache();return cache[String(b||'')]||null}
+function applyCatalogToForm(x){if(!x)return;if(!$('name').value)$('name').value=x.name||'';if(!$('model').value)$('model').value=x.model||'';if(!photoData&&x.photo){photoData=x.photo;$('preview').src=photoData;$('preview').style.display='block'}let pt=$('priceType').value;if(!$('price').value){let p=pt==='Firma'?x.firmPrice:pt==='Perakende'?x.retailPrice:x.servicePrice;if(Number(p)>0)$('price').value=String(p)}}
+async function afterBarcodeEntered(){let b=$('barcode').value.trim();if(!b)return;let loc=getAll().find(x=>String(x.barcode)===b);if(loc){$('name').value=loc.name||$('name').value;$('model').value=loc.model||$('model').value;if(loc.photo&&!photoData){photoData=loc.photo;$('preview').src=photoData;$('preview').style.display='block'}}let c=catalogRecordForBarcode(b);if(c)applyCatalogToForm(c);else if(cloudReady){await pullCloudCatalog(true);c=catalogRecordForBarcode(b);if(c)applyCatalogToForm(c)}}
+
+function normText(v){return String(v||'').toLocaleLowerCase('tr-TR').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/ı/g,'i').replace(/[^a-z0-9ğüşöçİi]+/gi,' ').trim()}
+function smartText(v){
+ let t=' '+normText(v)+' ';
+ const aliases=[
+  [/\b(baylant|baylan|vailand|vailant|valiant)\b/g,' vaillant '],
+  [/\b(eyfel|airfell|airfel)\b/g,' airfel '],
+  [/\b(esanj[oö]r|esenjor|eseniyor|esanjor)\b/g,' esanjor '],
+  [/\b(devirdaim|devir daim)\b/g,' devir daim '],
+  [/\b(doldurma musluk|doldurma muslugu)\b/g,' doldurma muslugu '],
+  [/\b(totalin|totoline)\b/g,' totaline ']
+ ];
+ for(const [re,to] of aliases)t=t.replace(re,to);
+ return t.replace(/\s+/g,' ').trim();
+}
+function moneyTR(v){let n=Number(v||0);return n>0?n.toLocaleString('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:2})+' TL':'Tanımlı değil'}
+function servicePriceOf(x){return Number(x&&x.servicePrice||0)}
+function scanBeep(kind='scan'){
+ try{
+  let AC=window.AudioContext||window.webkitAudioContext;
+  if(AC){
+   let c=new AC(),t=c.currentTime;
+   if(kind==='miss'){
+    let o=c.createOscillator(),g=c.createGain();
+    o.connect(g);g.connect(c.destination);
+    o.type='sine';o.frequency.setValueAtTime(390,t);
+    g.gain.setValueAtTime(.032,t);g.gain.exponentialRampToValueAtTime(.001,t+.10);
+    o.start(t);o.stop(t+.105);
+   }else{
+    // TEST 5.2: Market / el terminali tipi net "diit" barkod sesi.
+    // İki kısa yüksek frekans katmanı, yaklaşık 0.12 sn.
+    let master=c.createGain();
+    master.connect(c.destination);
+    master.gain.setValueAtTime(.0001,t);
+    master.gain.exponentialRampToValueAtTime(.060,t+.006);
+    master.gain.setValueAtTime(.060,t+.085);
+    master.gain.exponentialRampToValueAtTime(.0001,t+.125);
+
+    let o1=c.createOscillator(),g1=c.createGain();
+    o1.type='square';
+    o1.frequency.setValueAtTime(2350,t);
+    o1.frequency.exponentialRampToValueAtTime(2150,t+.11);
+    g1.gain.setValueAtTime(.72,t);
+    o1.connect(g1);g1.connect(master);
+
+    let o2=c.createOscillator(),g2=c.createGain();
+    o2.type='sine';
+    o2.frequency.setValueAtTime(3150,t);
+    o2.frequency.exponentialRampToValueAtTime(2850,t+.11);
+    g2.gain.setValueAtTime(.28,t);
+    o2.connect(g2);g2.connect(master);
+
+    o1.start(t);o2.start(t);
+    o1.stop(t+.13);o2.stop(t+.13);
+   }
+   setTimeout(()=>c.close&&c.close(),260);
+  }
+ }catch(e){}
+ try{if(navigator.vibrate)navigator.vibrate(kind==='miss'?[55,45,55]:22)}catch(e){}
+}
+function missingFeedback(){scanBeep('miss');setTimeout(()=>scanBeep('miss'),170)}
+function queueLookup(){clearTimeout(lookupTypingTimer);lookupTypingTimer=setTimeout(()=>{let q=($('lookupQuery').value||'').trim();if(q.length>=2)lookupText('typing');else if(!q)renderLookup([])},220)}
+function allLookupItems(){
+ let map=new Map(),cache=cloudCatalog&&Object.keys(cloudCatalog).length?cloudCatalog:getCatalogCache();
+ if(!Object.keys(deletedCatalog||{}).length)deletedCatalog=getDeletedCache();
+ Object.values(cache||{}).forEach(x=>{if(x&&x.barcode&&!isDeletedBarcode(x.barcode))map.set(String(x.barcode),{...x,barcode:String(x.barcode)})});
+ getAll().forEach(x=>{
+  // Buluta daha önce başarıyla gitmiş eski telefon geçmişi katalog otoritesi değildir.
+  // Yalnız çevrimdışıyken veya bekleyen yeni kayıtsa aramaya eklenir.
+  if(cloudReady && !x.cloudPending)return;
+  let b=String(x.barcode||'');if(!b||isDeletedBarcode(b))return;
+  let z=map.get(b)||{barcode:b},pp=recordPrices(x);
+  map.set(b,{...z,barcode:b,name:z.name||x.name||'',model:z.model||x.model||'',photo:z.photo||x.photo||'',
+    firmPrice:Number(z.firmPrice||pp.firmPrice||0),retailPrice:Number(z.retailPrice||pp.retailPrice||0),
+    servicePrice:Number(z.servicePrice||pp.servicePrice||0),warehouse:Number(z.warehouse||0),vehicle:Number(z.vehicle||0)})
+});
+ return [...map.values()];
+}
+function scoreLookupItem(x,q){
+ let raw=String(q||'').trim(),nq=smartText(raw),b=String(x.barcode||''),n=smartText(x.name),m=smartText(x.model),all=smartText([b,x.name,x.model].join(' '));
+ if(!nq)return 0;if(b===raw)return 100;if(smartText(b)===nq)return 99;if(n===nq)return 96;if(n.startsWith(nq))return 88;if(m===nq)return 84;if(all.includes(nq))return 78;
+ let parts=nq.split(/\s+/).filter(Boolean),hit=0,partial=0;for(const t of parts){if(all.includes(t))hit++;else if(t.length>=4&&all.split(' ').some(w=>w.startsWith(t)||t.startsWith(w)))partial+=.6}
+ if(!parts.length)return 0;let ratio=(hit+partial)/parts.length;return ratio>=.5?Math.round(70*ratio):0;
+}
+function lookupText(source='manual'){
+ let q=($('lookupQuery').value||'').trim();if(!q){$('lookupMsg').textContent='Arama için parça adı, marka, ürün kodu veya barkod yazın.';renderLookup([]);return}
+ let arr=allLookupItems().map(x=>({...x,_score:scoreLookupItem(x,q)})).filter(x=>x._score>0).sort((a,b)=>b._score-a._score).slice(0,20);
+ $('lookupMsg').textContent=arr.length?arr.length+' eşleşme bulundu. En uygun sonuç yukarıda.':'Kayıt bulunamadı. PC’den güncel bilgiyi alıp tekrar deneyin.';renderLookup(arr,'text');
+ if(source==='scan'&&!arr.length)missingFeedback();
+}
+async function refreshLookupCatalog(){
+ if(!cloudReady){
+   $('lookupMsg').textContent='Buluta otomatik bağlanılıyor...';
+   let connected=await ensureCloudConnection(false);
+   if(!connected){$('lookupMsg').textContent='Bulut bağlantısı kurulamadı. İnterneti kontrol edin; ilk kullanım ise YEDEK / SENKRON bölümünden bir kez giriş yapın.';return}
+ }
+ $('lookupMsg').textContent='PC fiyatları ve stokları alınıyor...';let ok=await pullCloudCatalog(true);$('lookupMsg').textContent=ok?'PC fiyatları ve stokları güncellendi.':'Güncel bilgiler alınamadı.';if(($('lookupQuery').value||'').trim())lookupText();
+}
+function renderTopResult(x){
+ let el=$('lookupTopResult');currentLookupItem=x||null;if(!el)return;
+ if(!x){el.className='lookupTopEmpty';el.innerHTML='Barkodu okutun veya aşağıdaki kutuya parça adını / kodunu yazın. Bulunan parçanın resmi, servis fiyatı ve araç-depo stoku burada görünecek.';return}
+ el.className='';let pic=x.photo?`<img src="${x.photo}" onclick="window.open(this.src,'_blank')" alt="Parça">`:'<div class="noPhoto">Ürün fotoğrafı yok</div>';
+ let p=servicePriceOf(x);
+ el.innerHTML=`<div class="topProduct">${pic}<div><div class="topProductName">${esc(x.name||'İsimsiz parça')}</div><div class="lookupCode">${esc(x.model||'')} ${x.barcode?' · '+esc(x.barcode):''}</div><div class="servicePrice"><small>SERVİS FİYATI</small>${p>0?moneyTR(p):'Tanımlı değil'}</div><div class="stockBoxes"><div class="stockBox">ARAÇ<b>${Number(x.vehicle||0)}</b></div><div class="stockBox">DEPO<b>${Number(x.warehouse||0)}</b></div></div></div></div><button type="button" id="addQuoteBtn" class="btn green" style="user-select:none;-webkit-user-select:none;touch-action:manipulation" onclick="addCurrentToCart(event)">FİYAT SEPETİNE EKLE</button>`;
+}
+function selectLookupResult(i){let x=lastLookupResults[i];if(!x)return;renderTopResult(x);$('lookupTopCard').scrollIntoView({behavior:'smooth',block:'start'})}
+function resultCard(x,i,similarity){
+ let pic=x.photo?`<img src="${x.photo}" onclick="window.open(this.src,'_blank')">`:'';let sim=similarity!=null?`<span class="similarity">Yakınlık: %${Math.max(0,Math.min(100,Math.round(similarity*100)))}</span>`:'';let p=servicePriceOf(x);
+ return `<div class="lookupResult">${pic}<div class="lookupName">${esc(x.name||'İsimsiz parça')}</div><div class="lookupCode">${esc(x.barcode||'—')} ${x.model?' · '+esc(x.model):''}</div>${sim}<div class="onlyPrice">Servis: ${p>0?moneyTR(p):'Tanımlı değil'}</div><div class="stockLine">Araç: <b>${Number(x.vehicle||0)}</b> · Depo: <b>${Number(x.warehouse||0)}</b></div><div class="resultAction"><button class="btn dark" onclick="selectLookupResult(${i})">ÜSTE GETİR</button></div><div style="clear:both"></div></div>`;
+}
+function renderLookup(arr=[],mode=''){
+ let el=$('lookupResults');if(!el)return;lastLookupResults=arr||[];renderTopResult(arr[0]||null);
+ if(!arr.length){el.innerHTML='<div class="msg">Sonuç yok.</div>';$('lookupSummary').textContent=mode==='photo'?'Fotoğrafa yakın kayıt bulunamadı. Barkod veya isimle aramayı deneyin.':'İsim, barkod, ürün kodu, marka veya fotoğraf ile arama yapabilirsiniz.';return}
+ el.innerHTML=arr.map((x,i)=>resultCard(x,i,x._similarity)).join('');$('lookupSummary').textContent=(mode==='photo'?'Fotoğrafa en yakın ':'Bulunan ')+arr.length+' kayıt gösteriliyor.';
+ if(mode!=='photo')$('lookupTopCard').scrollIntoView({behavior:'smooth',block:'start'});
+}
+function showMiniNotice(msg,ok=true){
+ let n=document.getElementById('miniNotice');
+ if(!n){
+  n=document.createElement('div');
+  n.id='miniNotice';
+  n.style.cssText='position:fixed;left:50%;bottom:84px;transform:translateX(-50%);z-index:99999;padding:12px 18px;border-radius:14px;font-weight:800;font-size:16px;box-shadow:0 8px 30px #0008;max-width:88%;text-align:center';
+  document.body.appendChild(n);
+ }
+ n.style.background=ok?'#18b66a':'#d84a4a';
+ n.style.color='#fff';
+ n.textContent=msg;
+ n.style.display='block';
+ clearTimeout(window.__miniNoticeTimer);
+ window.__miniNoticeTimer=setTimeout(()=>{n.style.display='none'},1500);
+}
+function saveQuoteCart(){
+ renderQuoteCart();
+ try{
+  localStorage.setItem('ot_pb_quote_cart_v1',JSON.stringify(quoteCart));
+  return true;
+ }catch(e){
+  // Telefonun yerel hafızası dolu olsa bile sepet ekranda çalışmaya devam etsin.
+  console.warn('Fiyat sepeti yerel hafızaya yazılamadı',e);
+  return false;
+ }
+}
+function addCurrentToCart(ev){
+ if(ev){ev.preventDefault();ev.stopPropagation()}
+ let x=currentLookupItem;
+ if(!x){showMiniNotice('Önce bir parça bulun.',false);return false}
+ let price=Number(servicePriceOf(x)||0);
+ if(!(price>0)){showMiniNotice('Servis fiyatı tanımlı değil.',false);return false}
+ let b=String(x.barcode||x.name||Date.now());
+ let old=quoteCart.find(z=>String(z.key)===b);
+ if(old) old.qty=Number(old.qty||1)+1;
+ else quoteCart.push({key:b,barcode:x.barcode||'',name:x.name||'İsimsiz parça',price:price,qty:1});
+ let stored=saveQuoteCart();
+ let btn=document.getElementById('addQuoteBtn');
+ if(btn){
+  let oldText=btn.textContent;
+  btn.textContent='✓ SEPETE EKLENDİ';
+  btn.disabled=true;
+  setTimeout(()=>{btn.disabled=false;btn.textContent='FİYAT SEPETİNE EKLE'},900);
+ }
+ showMiniNotice((x.name||'Parça')+' sepete eklendi'+(stored?'':' • geçici'));
+ return false;
+}
+function removeCartItem(i){quoteCart.splice(i,1);saveQuoteCart();showMiniNotice('Parça sepetten çıkarıldı.')}
+function clearQuoteCart(){if(!quoteCart.length)return;if(confirm('Fiyat sepeti temizlensin mi?')){quoteCart=[];saveQuoteCart();showMiniNotice('Fiyat sepeti temizlendi.')}}
+function renderQuoteCart(){let el=$('quoteCart');if(!el)return;if(!quoteCart.length){el.innerHTML='<div class="lookupHint">Sepet boş. Müşteriye teklif edeceğiniz parçaları yukarıdaki sonuçtan ekleyin.</div>';return}let total=0;el.innerHTML='<div class="msg" style="border:1px solid #2fcb7b">Sepette '+quoteCart.reduce((s,x)=>s+Number(x.qty||1),0)+' parça var.</div>'+quoteCart.map((x,i)=>{let qty=Number(x.qty||1),v=Number(x.price||0)*qty;total+=v;return `<div class="cartRow"><div><div class="cartName">${esc(x.name)}</div><div class="cartMeta">${qty} adet${x.barcode?' · '+esc(x.barcode):''}</div><button class="miniBtn" onclick="removeCartItem(${i})">ÇIKAR</button></div><div class="cartPrice">${moneyTR(v)}</div></div>`}).join('')+`<div class="cartTotal"><span>TOPLAM TEKLİF</span><b>${moneyTR(total)}</b></div>`}
+async function startLookupScanner(){
+ stopLookupScanner();if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){$('lookupScanMsg').textContent='Kamera desteklenmiyor. Barkod fotoğrafı seçebilirsiniz.';return}
+ try{lookupStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}}});$('lookupVideo').srcObject=lookupStream;await $('lookupVideo').play();$('lookupVideoWrap').style.display='block';setTimeout(()=>{$('scannerCard')&&$('scannerCard').scrollIntoView({behavior:'smooth',block:'start'})},80);if('BarcodeDetector' in window){let fm=['code_128','ean_13','ean_8','upc_a','upc_e','qr_code','data_matrix'];try{lookupDetector=new BarcodeDetector({formats:fm})}catch(e){lookupDetector=new BarcodeDetector()}$('lookupScanMsg').textContent='Barkodu kameraya tutun.';lookupScanLoop()}else{$('lookupScanMsg').textContent='Bu tarayıcı canlı otomatik okumayı desteklemiyor. Barkod fotoğrafı seçin.'}}catch(e){$('lookupScanMsg').textContent='Kamera açılamadı. Kamera iznini kontrol edin.'}
+}
+async function lookupScanLoop(){if(!lookupDetector||!lookupStream)return;try{let codes=await lookupDetector.detect($('lookupVideo'));if(codes&&codes.length){let b=codes[0].rawValue||'';$('lookupQuery').value=b;$('lookupScanMsg').textContent='Barkod okundu: '+b;scanBeep('scan');stopLookupScanner();lookupText('scan');return}}catch(e){}lookupTimer=setTimeout(lookupScanLoop,350)}
+function stopLookupScanner(){if(lookupTimer){clearTimeout(lookupTimer);lookupTimer=null}if(lookupStream){lookupStream.getTracks().forEach(t=>t.stop());lookupStream=null}if($('lookupVideoWrap'))$('lookupVideoWrap').style.display='none'}
+async function decodeBarcodePhoto(file){
+ $('lookupScanMsg').textContent='Barkod fotoğrafı okunuyor...';
+ try{if('BarcodeDetector' in window&&window.createImageBitmap){let bm=await createImageBitmap(file),d;try{d=new BarcodeDetector({formats:['code_128','ean_13','ean_8','upc_a','upc_e','qr_code','data_matrix']})}catch(e){d=new BarcodeDetector()}let r=await d.detect(bm);if(r&&r.length)return r[0].rawValue||''}}catch(e){}
+ if(window.Quagga){let url=URL.createObjectURL(file);try{return await new Promise(resolve=>{Quagga.decodeSingle({src:url,numOfWorkers:0,locate:true,inputStream:{size:1200},decoder:{readers:['ean_reader','ean_8_reader','code_128_reader','upc_reader','upc_e_reader','code_39_reader','codabar_reader','i2of5_reader']}},res=>resolve(res&&res.codeResult&&res.codeResult.code?String(res.codeResult.code):''))})}finally{URL.revokeObjectURL(url)}}
+ return '';
+}
+async function sourceToCanvas(source,w=8,h=8){return await new Promise((resolve,reject)=>{let im=new Image();im.onload=()=>{let c=document.createElement('canvas');c.width=w;c.height=h;let ctx=c.getContext('2d',{willReadFrequently:true});ctx.drawImage(im,0,0,w,h);resolve(ctx.getImageData(0,0,w,h).data)};im.onerror=reject;if(source instanceof File){let r=new FileReader();r.onload=()=>im.src=r.result;r.onerror=reject;r.readAsDataURL(source)}else im.src=source})}
+async function imageSig(source){let key=typeof source==='string'?source.slice(0,120):'';if(key&&photoSigCache.has(key))return photoSigCache.get(key);let d=await sourceToCanvas(source,8,8),gray=[],rs=0,gs=0,bs=0;for(let i=0;i<d.length;i+=4){let r=d[i],g=d[i+1],b=d[i+2];gray.push(.299*r+.587*g+.114*b);rs+=r;gs+=g;bs+=b}let avg=gray.reduce((a,b)=>a+b,0)/gray.length,bits=gray.map(v=>v>=avg?1:0).join(''),sig={bits,r:rs/64,g:gs/64,b:bs/64};if(key)photoSigCache.set(key,sig);return sig}
+function sigSim(a,b){let h=0;for(let i=0;i<64;i++)if(a.bits[i]!==b.bits[i])h++;let hs=1-h/64,cd=Math.sqrt((a.r-b.r)**2+(a.g-b.g)**2+(a.b-b.b)**2),cs=Math.max(0,1-cd/441.7);return .82*hs+.18*cs}
+async function searchByPhoto(){let f=$('partSearchPhoto').files&&$('partSearchPhoto').files[0];if(!f){$('lookupSummary').textContent='Önce parçanın fotoğrafını çekin veya seçin.';return}let items=allLookupItems().filter(x=>x.photo);if(!items.length){$('lookupSummary').textContent='Katalogda karşılaştırılacak ürün fotoğrafı yok.';return}$('lookupSummary').textContent='Fotoğraflar karşılaştırılıyor...';try{let q=await imageSig(f),sc=[];for(const x of items){try{let s=await imageSig(x.photo);sc.push({...x,_similarity:sigSim(q,s)})}catch(e){}}sc.sort((a,b)=>b._similarity-a._similarity);let top=sc.slice(0,8);renderLookup(top,'photo')}catch(e){$('lookupSummary').textContent='Fotoğraf karşılaştırılamadı. Barkod veya isimle aramayı deneyin.'}}
+
+async function saveItem(){
+ let n=$('name').value.trim(),b=$('barcode').value.trim();if(!n&&!b){alert('Parça adı veya barkod girin.');return}
+ if(!b){b=await generateUniqueBarcode();$('barcode').value=b;$('scanMsg').textContent='Barkodu olmayan ürün için yeni barkod oluşturuldu: '+b}
+ if(!n){let c=catalogRecordForBarcode(b);n=(c&&c.name)||'İsimsiz parça'}
+ let a=getAll(),existing=a.find(x=>String(x.barcode)===String(b));
+ let rec={
+  id:existing?existing.id:Date.now(),
+  barcode:b,name:n,model:$('model').value.trim(),
+  firmPrice:$('firmPrice').value.trim(),
+  retailPrice:$('retailPrice').value.trim(),
+  servicePrice:$('servicePrice').value.trim(),
+  action:$('action').value,qty:$('qty').value.trim()||'1',
+  customer:$('customer').value.trim(),note:$('note').value.trim(),
+  photo:photoData||(existing&&existing.photo)||'',
+  date:new Date().toLocaleString('tr-TR'),updatedAt:new Date().toISOString(),
+  cloudPending:true,reAddIntent:!!isDeletedBarcode(b),syncedAt:existing&&existing.syncedAt||''
+ };
+ if(existing)a=a.map(x=>String(x.barcode)===String(b)?rec:x);else a.unshift(rec);setAll(a);
+ if(cloudReady){try{await pushCatalogItem(rec);rec.cloudPending=false;rec.syncedAt=new Date().toISOString();setAll(getAll().map(x=>String(x.barcode)===String(b)?rec:x));cloudMsg('● '+n+' PC ortak bulutuna gönderildi.','cloudOk')}catch(e){cloudMsg('Kayıt telefonda saklandı; buluta gönderilemedi: '+String(e.message||e),'cloudBad')}}
+ clearForm();render();alert(cloudReady?'Kayıt tamamlandı ve buluta gönderildi.':'Kayıt telefonda saklandı. Buluta bağlanınca otomatik gönderilecek.');
+}
+async function syncLocalToCloud(silent){
+ if(!cloudReady){if(!silent)cloudMsg('Önce buluta bağlanın.','cloudWarn');return false}
+ try{
+  let tombRows=await cloudFetch(cloudDbUrl('catalogDeleted'))||{},d={};
+  Object.values(tombRows||{}).forEach(r=>{if(r&&r.deleted&&r.barcode)d[String(r.barcode)]=r});
+  setDeletedCache(d);
+ }catch(e){}
+ let a=getAll(),ok=0,fail=0,skipped=0,blocked=0;
+ for(const x of a){
+  if(!x.cloudPending){skipped++;continue}
+  if(isDeletedBarcode(x.barcode) && !x.reAddIntent){x.cloudPending=false;blocked++;continue}
+  try{
+    if(x.reAddIntent){
+      try{await cloudFetch(cloudDbUrl('catalogDeleted/'+safeKey(x.barcode)),{method:'DELETE'})}catch(e){}
+      delete deletedCatalog[String(x.barcode)];setDeletedCache(deletedCatalog);
+    }
+    await pushCatalogItem(x);x.cloudPending=false;x.reAddIntent=false;x.syncedAt=new Date().toISOString();ok++;
+  }catch(e){x.cloudPending=true;fail++}
+ }
+ setAll(a);render();
+ if(!silent)cloudMsg('Senkron · '+ok+' gönderildi'+(skipped?' · '+skipped+' eski kayıt atlandı':'')+(blocked?' · '+blocked+' kalıcı silinen geri gönderilmedi':'')+(fail?' · '+fail+' hata':''),fail?'cloudWarn':'cloudOk');
+ return fail===0
+}
+function clearForm(){['barcode','name','model','firmPrice','retailPrice','servicePrice','customer','note'].forEach(x=>{if($(x))$(x).value=''});$('qty').value='1';$('photo').value='';photoData='';$('preview').src='';$('preview').style.display='none';stopScanner()}
+function delItem(id){if(confirm('Bu kayıt silinsin mi?')){setAll(getAll().filter(x=>x.id!==id));render()}}
+function render(){
+ const q=($('search')?.value||'').toLocaleLowerCase('tr-TR');
+ const all=allLookupItems().filter(x=>!isDeletedBarcode(x.barcode));
+ const a=all.filter(x=>[x.name,x.barcode,x.model].join(' ').toLocaleLowerCase('tr-TR').includes(q));
+
+ $('sCount').textContent=all.length;
+ $('sEmanet').textContent=all.reduce((s,x)=>s+Number(x.vehicle||0),0);
+ $('sUsed').textContent=all.reduce((s,x)=>s+Number(x.warehouse||0),0);
+
+ $('list').innerHTML=a.length?a.map(x=>`
+  <div class="item">
+   ${x.photo?`<img src="${x.photo}" onclick="window.open(this.src,'_blank')">`:''}
+   <b>${esc(x.name||'İsimsiz parça')}</b>
+   <small>${esc(x.barcode||'Barkod yok')} • ${esc(x.model||'Model yok')}</small><br>
+   <span class="badge">Araç: ${Number(x.vehicle||0)}</span>
+   <span class="badge">Depo: ${Number(x.warehouse||0)}</span>
+   <span class="badge">Firma: ${moneyTR(Number(x.firmPrice||0))}</span>
+   <span class="badge">Perakende: ${moneyTR(Number(x.retailPrice||0))}</span>
+   <span class="badge">Servis: ${moneyTR(Number(x.servicePrice||0))}</span>
+   <div style="clear:both"></div>
+   <small>Ortak katalog • Silme işlemi PC yönetiminden yapılır.</small>
+  </div>`).join(''):'<div class="msg">Ortak katalogda eşleşen parça bulunamadı.</div>';
+
+ const hist=getAll().slice().sort((x,y)=>Number(y.id||0)-Number(x.id||0));
+ let hh=$('localHistoryList');
+ if(hh)hh.innerHTML=hist.length?hist.map(x=>`
+  <div class="item">
+   ${x.photo?`<img src="${x.photo}" onclick="window.open(this.src,'_blank')">`:''}
+   <b>${esc(x.name||'İsimsiz parça')}</b>
+   <small>${esc(x.barcode||'Barkod yok')} • ${esc(x.model||'Model yok')}</small><br>
+   <span class="badge">${esc(x.action||'İşlem')}</span>
+   <span class="badge">Adet: ${esc(x.qty||'1')}</span>
+   <span class="badge ${x.cloudPending?'pendingBadge':'syncBadge'}">${x.cloudPending?'Bulut bekliyor':'Bulut ✓'}</span>
+   <div style="clear:both"></div>
+   <small>${esc(x.customer||'Müşteri/Firma yok')} • ${esc(x.date||'')}</small>
+  </div>`).join(''):'<div class="msg">Telefon işlem geçmişi boş.</div>';
+}
+function exportBackup(){
+ const blob=new Blob([JSON.stringify({app:'Onur Teknik Parça Barkod',version:3,exported:new Date().toISOString(),items:getAll()},null,2)],{type:'application/json'});
+ const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='ONUR_TEKNIK_PARCA_BARKOD_YEDEK.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+function importBackup(){
+ const f=$('importFile').files&&$('importFile').files[0];if(!f){alert('Önce JSON yedek dosyasını seçin.');return}
+ const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);const items=Array.isArray(d)?d:d.items;if(!Array.isArray(items))throw 0;setAll(items);alert('Yedek geri yüklendi.');render()}catch(e){alert('Geçerli bir yedek dosyası değil.')}};r.readAsText(f);
+}
+function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+
+if($('barcodePhoto'))$('barcodePhoto').addEventListener('change',async e=>{let f=e.target.files&&e.target.files[0];if(!f)return;let b=await decodeBarcodePhoto(f);if(b){$('lookupQuery').value=b;$('lookupScanMsg').textContent='Barkod fotoğraftan okundu: '+b;scanBeep('scan');lookupText('scan')}else $('lookupScanMsg').textContent='Barkod fotoğraftan okunamadı. Daha net/yakın çekin veya kodu elle yazın.'});
+if($('partSearchPhoto'))$('partSearchPhoto').addEventListener('change',async e=>{let f=e.target.files&&e.target.files[0];if(!f)return;lookupPhotoData=await compressPhoto(f,900,.78);$('lookupPhotoPreview').src=lookupPhotoData;$('lookupPhotoPreview').style.display='block'});
+
+$('barcode').addEventListener('change',afterBarcodeEntered);$('barcode').addEventListener('blur',afterBarcodeEntered);$('barcode').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();afterBarcodeEntered()}});$('priceType').addEventListener('change',()=>{let c=catalogRecordForBarcode($('barcode').value.trim());if(c){$('price').value='';applyCatalogToForm(c)}});
+if($('cloudEmail'))$('cloudEmail').value=localStorage.getItem('ot_pb_cloud_email')||'';
+cloudCatalog=getCatalogCache();
+window.addEventListener('online',()=>autoCloud());document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!cloudReady)autoCloud()});setInterval(()=>{if(cloudReady){pullCloudCatalog(true);syncLocalToCloud(true)}else autoCloud()},5*60*1000);
+if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>{});
+render();renderQuoteCart();setTimeout(autoCloud,700);
+</script>
+</body>
+</html>
